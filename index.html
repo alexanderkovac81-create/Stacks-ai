@@ -90,6 +90,13 @@ textarea{width:100%;min-height:90px;font:12px ui-monospace,monospace;padding:10p
 .wiz h3{font-size:22px;margin:10px 0 6px}
 .dots{display:flex;gap:6px;margin:6px 0 14px}.dots i{flex:1;height:4px;border-radius:2px;background:var(--line)}.dots i.on{background:#1D9E75}
 .acct{display:inline-block;font-size:11px;font-weight:600;padding:1px 6px;border-radius:5px;background:var(--line);color:var(--text);margin-left:4px;vertical-align:1px}
+.sstat{margin-left:auto;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px}
+.sstat[hidden]{display:none}
+.sstat i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.sstat.ok i{background:#1D9E75}.sstat.busy i{background:#EF9F27}.sstat.err i{background:var(--red)}
+.words{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}
+.words span{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 6px;font-size:14px;font-weight:600;text-align:center}
+.words span small{display:block;font-size:10px;color:var(--muted);font-weight:400}
 .hrow2{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
 .hrow2 .nm small{color:var(--muted)}
 .chart{touch-action:pan-x}
@@ -188,7 +195,7 @@ input,select{width:100%;font:inherit;font-size:16px;padding:10px;border-radius:1
 </head>
 <body>
 <div class="wrap">
-  <div class="brand"><svg viewBox="0 0 26 22" aria-hidden="true"><rect x="2" y="14" width="22" height="6" rx="1.5" fill="#0F6E56"/><rect x="3" y="8" width="22" height="6" rx="1.5" fill="#1D9E75"/><rect x="1" y="2" width="22" height="6" rx="1.5" fill="#5DCAA5"/><circle cx="12" cy="5" r="1.6" fill="#0F6E56"/></svg>Stacks <span>AI</span></div>
+  <div class="brand" id="brandBar"><svg viewBox="0 0 26 22" aria-hidden="true"><rect x="2" y="14" width="22" height="6" rx="1.5" fill="#0F6E56"/><rect x="3" y="8" width="22" height="6" rx="1.5" fill="#1D9E75"/><rect x="1" y="2" width="22" height="6" rx="1.5" fill="#5DCAA5"/><circle cx="12" cy="5" r="1.6" fill="#0F6E56"/></svg>Stacks <span>AI</span><span class="sstat" id="syncStat" hidden><i></i><span></span></span></div>
   <section id="vBills">
     <h2 class="pg">Bills</h2>
     <div id="dueAlert"></div>
@@ -246,6 +253,8 @@ input,select{width:100%;font:inherit;font-size:16px;padding:10px;border-radius:1
 
   <section id="vSet" hidden>
     <h2 class="pg">Settings</h2>
+    <div class="sec">Sync and security</div>
+    <div class="card" style="padding:12px" id="syncCard"></div>
     <div class="sec">App appearance</div>
     <div class="card">
       <div class="set"><div class="nm"><b>Theme</b><small>Light, medium grey, or dark</small></div>
@@ -445,6 +454,8 @@ input,select{width:100%;font:inherit;font-size:16px;padding:10px;border-radius:1
   <div class="hint">Deleting moves its bills to your first account.</div>
 </div></div>
 
+<div class="sheet-bg" id="syncBg"><div class="sheet" id="syncBody"></div></div>
+
 <div class="sheet-bg" id="payBg"><div class="sheet">
   <h3 id="payTitle"></h3><div id="payInfo" style="color:var(--muted);font-size:14px"></div>
   <label class="f">Amount paid ($)</label><input id="payAmt" type="number" inputmode="decimal" step="0.01" min="0">
@@ -457,7 +468,7 @@ input,select{width:100%;font:inherit;font-size:16px;padding:10px;border-radius:1
 const COLORS=['#378ADD','#1D9E75','#7F77DD','#BA7517','#D4537E','#D85A30','#639922','#5F5E5A'];
 const KEY='billColumns.v2',CKEY='billColumns.cfg2',IKEY='billColumns.income2';
 let income=[];
-function saveInc(){try{localStorage.setItem(IKEY,JSON.stringify(income))}catch(e){}}
+function saveInc(){try{localStorage.setItem(IKEY,JSON.stringify(income))}catch(e){}if(window.syncQueue)syncQueue()}
 function loadInc(){try{const s=localStorage.getItem(IKEY);if(s)income=JSON.parse(s)}catch(e){}}
 let cfg={remind:3,warn:14,warnBi:14,range:30,layout:'vertical',landWide:true,theme:'light',lArrange:false,lSort:'due',bArrange:true,bSort:'due',budgetOrder:[]};
 function saveCfg(){try{localStorage.setItem(CKEY,JSON.stringify(cfg))}catch(e){}}
@@ -484,7 +495,7 @@ function dueText(b){const d=daysUntil(b.due);return d<0?(-d)+'d late':d===0?'due
 function repeatText(b){const f=fq(b.freq).l;let t=b.mode==='ongoing'?f+' · recurring':b.remaining<=1?'One time':f+' · '+b.remaining+' left';
   if((b.cat||guessCat(b.name))==='debt'){if(b.balance>0)t+=' · owe '+money(Math.round(b.balance));if(b.goal)t+=' · goal'}return t}
 
-function save(){try{localStorage.setItem(KEY,JSON.stringify(bills))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(bills))}catch(e){}if(window.syncQueue)syncQueue()}
 function load(){bills=[];try{const s=localStorage.getItem(KEY);if(s)bills=JSON.parse(s)}catch(e){}}
 function loadSample(){
   const t=new Date();t.setHours(0,0,0,0);const mk=(n,a,c,dd,mode,freq,rem)=>({id:Math.random().toString(36).slice(2),name:n,amount:a,color:c,due:iso(addDays(t,dd)),anchor:addDays(t,dd).getDate(),mode,freq,remaining:rem});
@@ -745,7 +756,7 @@ function nextDue(b){return stepF(parse(b.due),b.freq,b.anchor)}
 payCancel.onclick=()=>payBg.classList.remove('on');
 payEdit.onclick=()=>{payBg.classList.remove('on');openEdit(payId)};
 const HKEY='billColumns.hist2';let hist=[];
-function saveHist(){try{localStorage.setItem(HKEY,JSON.stringify(hist.slice(-600)))}catch(e){}}
+function saveHist(){try{localStorage.setItem(HKEY,JSON.stringify(hist.slice(-600)))}catch(e){}if(window.syncQueue)syncQueue()}
 function loadHist(){try{const s=localStorage.getItem(HKEY);if(s)hist=JSON.parse(s)}catch(e){}}
 function settle(b,type,amt){const snap=JSON.parse(JSON.stringify(b)),pos=bills.indexOf(b);
   hist.push({id:uid(),at:Date.now(),billId:b.id,name:b.name,cat:catOf(b),type,amount:type==='paid'?amt:0,est:b.amount,due:b.due,on:iso(today()),snap,pos});
@@ -776,7 +787,7 @@ function renderHist(){const L=histList;const items=[...hist].reverse();const lat
 const PKEY='billColumns.plan2';
 let plan={bank:0,cushion:200,spend:[],goals:[],payMode:'split',log:[],bankAt:0};
 const DEFPLAN=JSON.stringify(plan);
-function savePlan(){try{localStorage.setItem(PKEY,JSON.stringify(plan))}catch(e){}}
+function savePlan(){try{localStorage.setItem(PKEY,JSON.stringify(plan))}catch(e){}if(window.syncQueue)syncQueue()}
 function loadPlan(){try{const s=localStorage.getItem(PKEY);if(s)plan={...plan,...JSON.parse(s)}}catch(e){}}
 const uid=()=>Math.random().toString(36).slice(2);
 const PRI={must:'Must pay',important:'Important',flex:'Flexible'};
@@ -1005,8 +1016,8 @@ function wizOpen(){wz={step:0};wizRender();wiz.classList.add('on')}
 function wizClose(done){wiz.classList.remove('on');cfg.setupDone=true;saveCfg();render();if(done){show('budget');toast('All set. Here\'s your budget.')}}
 function wizRender(){const W=wizBody,st=wz.step,dots=`<div class="dots">${[0,1,2,3,4].map(i=>`<i class="${i<=st?'on':''}"></i>`).join('')}</div>`;let h='';
   const skip='<div class="bar"><button class="btn" id="wzSkip">Skip setup</button></div>';
-  if(st===0)h=`<div class="brand" style="margin-top:20px">${document.querySelector('.brand').innerHTML}</div><h3>Let's set up your budget</h3><p class="muted">About 2 minutes. You'll add your paydays, your bills, what you spend each week, and one goal. You can change anything later.</p>
-    <div class="bar"><button class="btn pri" id="wzNext">Start</button></div><div class="bar"><button class="btn" id="wzSample">Just look around with sample bills</button></div>`;
+  if(st===0)h=`<div class="brand" style="margin-top:20px">${document.querySelector('.brand').innerHTML.replace(/<span class="sstat[\s\S]*?<\/span><\/span>/,'')}</div><h3>Let's set up your budget</h3><p class="muted">About 2 minutes. You'll add your paydays, your bills, what you spend each week, and one goal. You can change anything later.</p>
+    <div class="bar"><button class="btn pri" id="wzNext">Start</button></div><div class="bar"><button class="btn" id="wzSample">Just look around with sample bills</button></div>${SYNC_OK?'<div class="bar"><button class="btn" id="wzJoin">I already use Stacks on another device</button></div>':''}`;
   if(st===1){h=`${dots}<h3>Your paydays</h3><p class="muted">Add each paycheque. If two of you get paid, add each one.</p>
     <div class="card" style="padding:4px 12px">${income.map(x=>`<div class="hrow2" style="border-top:0"><div class="nm"><b>${esc(x.name)}</b><small>${FREQ[x.freq]}</small></div><div class="amt pos">${money(x.amount)}</div></div>`).join('')||'<div class="empty">No paydays yet</div>'}</div>
     <label class="f">Name</label><input id="wzIName" placeholder="${income.length?'Partner\'s pay':'My pay'}">
@@ -1038,6 +1049,7 @@ function wizRender(){const W=wizBody,st=wz.step,dots=`<div class="dots">${[0,1,2
   const $=id=>document.getElementById(id);
   if($('wzSkip'))wzSkip.onclick=()=>wizClose(false);
   if($('wzSample'))wzSample.onclick=()=>{loadSample();wizClose(false);show('bills')};
+  if($('wzJoin'))wzJoin.onclick=()=>{wizClose(false);show('set');syncOpen()};
   if($('wzBack'))wzBack.onclick=()=>{wz.step--;wizRender()};
   if(st===1){wzIFreq.onchange=()=>{const sm=wzIFreq.value==='semi';wzISemi.style.display=sm?'':'none';wzIDateW.style.display=sm?'none':''};
     const add=()=>{const n=wzIName.value.trim()||wzIName.placeholder,a=parseFloat(wzIAmt.value);if(!(a>0)){wzErr.textContent='Enter the take-home amount';return false}
@@ -1070,9 +1082,118 @@ acAdd.onclick=()=>openAc();acCancel.onclick=()=>acBg.classList.remove('on');acNa
 acSave.onclick=()=>{const n=acName.value.trim();if(!n){acErr.textContent='Enter a name';return}const A=accts();if(acId)A.find(x=>x.id===acId).name=n;else A.push({id:uid(),name:n});savePlan();acBg.classList.remove('on');render()};
 acDel.onclick=()=>{const A=accts();if(A.length<2)return;plan.accounts=A.filter(x=>x.id!==acId);const to=plan.accounts[0];bills.forEach(b=>{if(b.acct===acId)b.acct=to.id});save();savePlan();acBg.classList.remove('on');toast('Bills moved to '+to.name);render()};
 
+/* ===== Sync with end-to-end encryption ===== */
+const SB_URL='https://bbmuaiqwslswtmnbcqsw.supabase.co',SB_KEY='sb_publishable_W5k91Ky7DIN1ddHaTYIeNw_GvEg0wvD';
+const SB_LIB='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js',SB_SRI='sha384-uteMfOloLDGt042uDz+xHGF3ym63/WQ6rFq7murQRG8Ih7QrXGEGNtWd8688sb4O';
+const SYNC_OK=!!(SB_URL&&SB_URL.startsWith('https://')&&SB_KEY&&!SB_KEY.startsWith('__'))&&!/claude/.test(location.hostname);
+const WORDS='abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid acoustic acquire across act action actor actress actual adapt add addict address adjust admit adult advance advice aerobic affair afford afraid again age agent agree ahead aim air airport aisle alarm album alcohol alert alien all alley allow almost alone alpha already also alter always amateur amazing among amount amused analyst anchor ancient anger angle angry animal ankle announce annual another answer antenna antique anxiety any apart apology appear apple approve april arch arctic area arena argue arm armed armor army around arrange arrest arrive arrow art artefact artist artwork ask aspect assault asset assist assume asthma athlete atom attack attend attitude attract auction audit august aunt author auto autumn average avocado avoid awake aware away awesome awful awkward axis baby bachelor bacon badge bag balance balcony ball bamboo banana banner bar barely bargain barrel base basic basket battle beach bean beauty because become beef before begin behave behind believe below belt bench benefit best betray better between beyond bicycle bid bike bind biology bird birth bitter black blade blame blanket blast bleak bless blind blood blossom blouse blue blur blush board boat body boil bomb bone bonus book boost border boring borrow boss bottom bounce box boy bracket brain brand brass brave bread breeze brick bridge brief bright bring brisk broccoli broken bronze broom brother brown brush bubble buddy budget buffalo build bulb bulk bullet bundle bunker burden burger burst bus business busy butter buyer buzz cabbage cabin cable cactus cage cake call calm camera camp can canal cancel candy cannon canoe canvas canyon capable capital captain car carbon card cargo carpet carry cart case cash casino castle casual cat catalog catch category cattle caught cause caution cave ceiling celery cement census century cereal certain chair chalk champion change chaos chapter charge chase chat cheap check cheese chef cherry chest chicken chief child chimney choice choose chronic chuckle chunk churn cigar cinnamon circle citizen city civil claim clap clarify claw clay clean clerk clever click client cliff climb clinic clip clock clog close cloth cloud clown club clump cluster clutch coach coast coconut code coffee coil coin collect color column combine come comfort comic common company concert conduct confirm congress connect consider control convince cook cool copper copy coral core corn correct cost cotton couch country couple course cousin cover coyote crack cradle craft cram crane crash crater crawl crazy cream credit creek crew cricket crime crisp critic crop cross crouch crowd crucial cruel cruise crumble crunch crush cry crystal cube culture cup cupboard curious current curtain curve cushion custom cute cycle dad damage damp dance danger daring dash daughter dawn day deal debate debris decade december decide decline decorate decrease deer defense define defy degree delay deliver demand demise denial dentist deny depart depend deposit depth deputy derive describe desert design desk despair destroy detail detect develop device devote diagram dial diamond diary dice diesel diet differ digital dignity dilemma dinner dinosaur direct dirt disagree discover disease dish dismiss disorder display distance divert divide divorce dizzy doctor document dog doll dolphin domain donate donkey donor door dose double dove draft dragon drama drastic draw dream dress drift drill drink drip drive drop drum dry duck dumb dune during dust dutch duty dwarf dynamic eager eagle early earn earth easily east easy echo ecology economy edge edit educate effort egg eight either elbow elder electric elegant element elephant elevator elite else embark embody embrace emerge emotion employ empower empty enable enact end endless endorse enemy energy enforce engage engine enhance enjoy enlist enough enrich enroll ensure enter entire entry envelope episode equal equip era erase erode erosion error erupt escape essay essence estate eternal ethics evidence evil evoke evolve exact example excess exchange excite exclude excuse execute exercise exhaust exhibit exile exist exit exotic expand expect expire explain expose express extend extra eye eyebrow fabric face faculty fade faint faith fall false fame family famous fan fancy fantasy farm fashion fat fatal father fatigue fault favorite feature february federal fee feed feel female fence festival fetch fever few fiber fiction field figure file film filter final find fine finger finish fire firm first fiscal fish fit fitness fix flag flame flash flat flavor flee flight flip float flock floor flower fluid flush fly foam focus fog foil fold follow food foot force forest forget fork fortune forum forward fossil foster found fox fragile frame frequent fresh friend fringe frog front frost frown frozen fruit fuel fun funny furnace fury future gadget gain galaxy gallery game gap garage garbage garden garlic garment gas gasp gate gather gauge gaze general genius genre gentle genuine gesture ghost giant gift giggle ginger giraffe girl give glad glance glare glass glide glimpse globe gloom glory glove glow glue goat goddess gold good goose gorilla gospel gossip govern gown grab grace grain grant grape grass gravity great green grid grief grit grocery group grow grunt guard guess guide guilt guitar gun gym habit hair half hammer hamster hand happy harbor hard harsh harvest hat have hawk hazard head health heart heavy hedgehog height hello helmet help hen hero hidden high hill hint hip hire history hobby hockey hold hole holiday hollow home honey hood hope horn horror horse hospital host hotel hour hover hub huge human humble humor hundred hungry hunt hurdle hurry hurt husband hybrid ice icon idea identify idle ignore ill illegal illness image imitate immense immune impact impose improve impulse inch include income increase index indicate indoor industry infant inflict inform inhale inherit initial inject injury inmate inner innocent input inquiry insane insect inside inspire install intact interest into invest invite involve iron island isolate issue item ivory jacket jaguar jar jazz jealous jeans jelly jewel job join joke journey joy judge juice jump jungle junior junk just kangaroo keen keep ketchup key kick kid kidney kind kingdom kiss kit kitchen kite kitten kiwi knee knife knock know lab label labor ladder lady lake lamp language laptop large later latin laugh laundry lava law lawn lawsuit layer lazy leader leaf learn leave lecture left leg legal legend leisure lemon lend length lens leopard lesson letter level liar liberty library license life lift light like limb limit link lion liquid list little live lizard load loan lobster local lock logic lonely long loop lottery loud lounge love loyal lucky luggage lumber lunar lunch luxury lyrics machine mad magic magnet maid mail main major make mammal man manage mandate mango mansion manual maple marble march margin marine market marriage mask mass master match material math matrix matter maximum maze meadow mean measure meat mechanic medal media melody melt member memory mention menu mercy merge merit merry mesh message metal method middle midnight milk million mimic mind minimum minor minute miracle mirror misery miss mistake mix mixed mixture mobile model modify mom moment monitor monkey monster month moon moral more morning mosquito mother motion motor mountain mouse move movie much muffin mule multiply muscle museum mushroom music must mutual myself mystery myth naive name napkin narrow nasty nation nature near neck need negative neglect neither nephew nerve nest net network neutral never news next nice night noble noise nominee noodle normal north nose notable note nothing notice novel now nuclear number nurse nut oak obey object oblige obscure observe obtain obvious occur ocean october odor off offer office often oil okay old olive olympic omit once one onion online only open opera opinion oppose option orange orbit orchard order ordinary organ orient original orphan ostrich other outdoor outer output outside oval oven over own owner oxygen oyster ozone pact paddle page pair palace palm panda panel panic panther paper parade parent park parrot party pass patch path patient patrol pattern pause pave payment peace peanut pear peasant pelican pen penalty pencil people pepper perfect permit person pet phone photo phrase physical piano picnic picture piece pig pigeon pill pilot pink pioneer pipe pistol pitch pizza place planet plastic plate play please pledge pluck plug plunge poem poet point polar pole police pond pony pool popular portion position possible post potato pottery poverty powder power practice praise predict prefer prepare present pretty prevent price pride primary print priority prison private prize problem process produce profit program project promote proof property prosper protect proud provide public pudding pull pulp pulse pumpkin punch pupil puppy purchase purity purpose purse push put puzzle pyramid quality quantum quarter question quick quit quiz quote rabbit raccoon race rack radar radio rail rain raise rally ramp ranch random range rapid rare rate rather raven raw razor ready real reason rebel rebuild recall receive recipe record recycle reduce reflect reform refuse region regret regular reject relax release relief rely remain remember remind remove render renew rent reopen repair repeat replace report require rescue resemble resist resource response result retire retreat return reunion reveal review reward rhythm rib ribbon rice rich ride ridge rifle right rigid ring riot ripple risk ritual rival river road roast robot robust rocket romance roof rookie room rose rotate rough round route royal rubber rude rug rule run runway rural sad saddle sadness safe sail salad salmon salon salt salute same sample sand satisfy satoshi sauce sausage save say scale scan scare scatter scene scheme school science scissors scorpion scout scrap screen script scrub sea search season seat second secret section security seed seek segment select sell seminar senior sense sentence series service session settle setup seven shadow shaft shallow share shed shell sheriff shield shift shine ship shiver shock shoe shoot shop short shoulder shove shrimp shrug shuffle shy sibling sick side siege sight sign silent silk silly silver similar simple since sing siren sister situate six size skate sketch ski skill skin skirt skull slab slam sleep slender slice slide slight slim slogan slot slow slush small smart smile smoke smooth snack snake snap sniff snow soap soccer social sock soda soft solar soldier solid solution solve someone song soon sorry sort soul sound soup source south space spare spatial spawn speak special speed spell spend sphere spice spider spike spin spirit split spoil sponsor spoon sport spot spray spread spring spy square squeeze squirrel stable stadium staff stage stairs stamp stand start state stay steak steel stem step stereo stick still sting stock stomach stone stool story stove strategy street strike strong struggle student stuff stumble style subject submit subway success such sudden suffer sugar suggest suit summer sun sunny sunset super supply supreme sure surface surge surprise surround survey suspect sustain swallow swamp swap swarm swear sweet swift swim swing switch sword symbol symptom syrup system table tackle tag tail talent talk tank tape target task taste tattoo taxi teach team tell ten tenant tennis tent term test text thank that theme then theory there they thing this thought three thrive throw thumb thunder ticket tide tiger tilt timber time tiny tip tired tissue title toast tobacco today toddler toe together toilet token tomato tomorrow tone tongue tonight tool tooth top topic topple torch tornado tortoise toss total tourist toward tower town toy track trade traffic tragic train transfer trap trash travel tray treat tree trend trial tribe trick trigger trim trip trophy trouble truck true truly trumpet trust truth try tube tuition tumble tuna tunnel turkey turn turtle twelve twenty twice twin twist two type typical ugly umbrella unable unaware uncle uncover under undo unfair unfold unhappy uniform unique unit universe unknown unlock until unusual unveil update upgrade uphold upon upper upset urban urge usage use used useful useless usual utility vacant vacuum vague valid valley valve van vanish vapor various vast vault vehicle velvet vendor venture venue verb verify version very vessel veteran viable vibrant vicious victory video view village vintage violin virtual virus visa visit visual vital vivid vocal voice void volcano volume vote voyage wage wagon wait walk wall walnut want warfare warm warrior wash wasp waste water wave way wealth weapon wear weasel weather web wedding weekend weird welcome west wet whale what wheat wheel when where whip whisper wide width wife wild will win window wine wing wink winner winter wire wisdom wise wish witness wolf woman wonder wood wool word work world worry worth wrap wreck wrestle wrist write wrong yard year yellow you young youth zebra zero zone zoo'.split(' ');
+const SKEY='billColumns.sync';
+let SY={hid:null,ver:0,phrase:'',key:null,email:'',last:0},sb=null,syKey=null,syDirty=false,syApplying=false,syTimer=null,syBusy=false,syChan=null,sySession=null;
+function sySave(){try{localStorage.setItem(SKEY,JSON.stringify(SY))}catch(e){}}
+function syLoad(){try{const s=localStorage.getItem(SKEY);if(s)SY={...SY,...JSON.parse(s)}}catch(e){}}
+const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+function b64(buf){const u=new Uint8Array(buf);let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
+const ub64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const normPhrase=p=>p.toLowerCase().replace(/[^a-z\s]/g,' ').trim().split(/\s+/).join(' ');
+function newPhrase(){const r=new Uint16Array(12);crypto.getRandomValues(r);return[...r].map(v=>WORDS[v%2048]).join(' ')}
+async function deriveAll(phrase){const enc=new TextEncoder();const base=await crypto.subtle.importKey('raw',enc.encode(normPhrase(phrase)),'PBKDF2',false,['deriveBits']);
+  const bits=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:enc.encode('stacks-ai/v1'),iterations:600000},base,512));
+  const token=hex(bits.slice(32));return{keyRaw:b64(bits.slice(0,32)),token,joinHash:hex(await crypto.subtle.digest('SHA-256',enc.encode(token)))}}
+async function syGetKey(){if(!syKey&&SY.key)syKey=await crypto.subtle.importKey('raw',ub64(SY.key),'AES-GCM',false,['encrypt','decrypt']);return syKey}
+async function syEncrypt(obj){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},await syGetKey(),new TextEncoder().encode(JSON.stringify(obj)));return{iv:b64(iv),data:b64(ct)}}
+async function syDecrypt(iv,data){const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:ub64(iv)},await syGetKey(),ub64(data));return JSON.parse(new TextDecoder().decode(pt))}
+function syState(){return{v:1,at:Date.now(),bills,income,plan,hist}}
+function syApply(d){syApplying=true;try{if(Array.isArray(d.bills))bills=d.bills;if(Array.isArray(d.income))income=d.income;if(d.plan)plan={...plan,...d.plan};if(Array.isArray(d.hist))hist=d.hist;
+  save();saveInc();savePlan();saveHist();render()}finally{syApplying=false}}
+function syStat(kind,txt){const el=document.getElementById('syncStat');if(!SYNC_OK||!SY.hid){el.hidden=true;return}el.hidden=false;el.className='sstat '+kind;el.querySelector('span').textContent=txt}
+function loadLib(){return new Promise((res,rej)=>{if(window.supabase)return res();const sc=document.createElement('script');sc.src=SB_LIB;sc.integrity=SB_SRI;sc.crossOrigin='anonymous';sc.onload=res;sc.onerror=()=>rej(new Error('Could not load the sync library. Check your connection.'));document.head.appendChild(sc)})}
+async function syClient(){if(sb)return sb;await loadLib();sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'billColumns.auth'}});
+  const{data}=await sb.auth.getSession();sySession=data.session;sb.auth.onAuthStateChange((_e,ses)=>{sySession=ses;renderSyncCard()});return sb}
+window.syncQueue=()=>{if(!SYNC_OK||!SY.hid||syApplying)return;syDirty=true;syStat('busy','Saving…');clearTimeout(syTimer);syTimer=setTimeout(syPush,1200)};
+async function syPush(){if(!SY.hid||syBusy){if(syBusy){clearTimeout(syTimer);syTimer=setTimeout(syPush,800)}return}syBusy=true;
+  try{await syClient();const enc=await syEncrypt(syState());const{data,error}=await sb.rpc('save_vault',{p_household:SY.hid,p_expected:SY.ver,p_iv:enc.iv,p_data:enc.data});if(error)throw error;
+    if(data===-1){syDirty=false;await syPull(true);toast('This budget changed on another device at the same time. Showing the latest, so check your last change.')}
+    else{SY.ver=data;SY.last=Date.now();sySave();syDirty=false;syStat('ok','Synced')}}
+  catch(e){syStat('err',navigator.onLine?'Sync error':'Offline');}finally{syBusy=false}}
+async function syPull(force){if(!SY.hid)return;try{await syClient();const{data,error}=await sb.from('vault').select('ver,iv,data').eq('household_id',SY.hid).maybeSingle();if(error)throw error;
+    if(!data){syStat('err','Not in household');return}
+    if(data.ver>SY.ver||force){if(syDirty&&!force){await syPush();return}const d=await syDecrypt(data.iv,data.data);SY.ver=data.ver;SY.last=Date.now();sySave();syApply(d)}
+    else{SY.last=Date.now();sySave()}syStat('ok','Synced');renderSyncCard()}
+  catch(e){syStat('err',navigator.onLine?(e&&e.name==='OperationError'?'Wrong key':'Sync error'):'Offline')}}
+async function syListen(){if(!SY.hid||syChan)return;try{await syClient();syChan=sb.channel('vault-'+SY.hid).on('postgres_changes',{event:'UPDATE',schema:'public',table:'vault',filter:'household_id=eq.'+SY.hid},p=>{if(p.new&&p.new.ver>SY.ver)syPull()}).subscribe()}catch(e){}}
+async function syStart(){if(!SYNC_OK)return;syLoad();renderSyncCard();if(!SY.hid)return;syStat('busy','Syncing…');try{await syClient();if(!sySession){syStat('err','Signed out');renderSyncCard();return}await syPull();syListen()}catch(e){syStat('err','Offline')}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&SY.hid&&SYNC_OK)syPull()});
+window.addEventListener('online',()=>{if(SY.hid&&SYNC_OK){if(syDirty)syPush();else syPull()}});
+
+function renderSyncCard(){const C=syncCard;if(!C)return;
+  if(!SYNC_OK){C.innerHTML=`<div class="muted" style="font-size:14px">${/claude/.test(location.hostname)?'Sync works in your installed Stacks AI app (the GitHub version), not in this preview.':'Sync isn\'t set up in this version yet.'}</div>`;return}
+  if(!SY.hid){C.innerHTML=`<p style="margin:0 0 6px"><b>Keep your phones and PC in sync</b></p><p class="muted" style="font-size:13px;margin:0">Your budget is locked on this device with a 12-word recovery phrase before it's sent. The server only stores scrambled data that nobody else can read, including us.</p><div class="bar"><button class="btn pri" id="syOn">Turn on sync</button></div>`;syOn.onclick=syncOpen;return}
+  C.innerHTML=`<p style="margin:0"><b class="pos">Sync is on</b></p><p class="muted" style="font-size:13px;margin:4px 0 0">${sySession?'Signed in as '+esc(sySession.user.email||''):'Signed out. Sign in to keep syncing.'}${SY.last?' · last synced '+agoTxt(SY.last).replace('today','just now'):''}</p><p class="muted" style="font-size:13px;margin:4px 0 0" id="syPeople"></p>
+    <div class="bar">${sySession?'<button class="btn" id="syNow">Sync now</button>':'<button class="btn pri" id="sySignIn">Sign in</button>'}<button class="btn" id="syShow">Show recovery phrase</button></div>
+    <div class="bar"><button class="btn dng" id="syOff">Turn off sync on this device</button></div>`;
+  if($id('syNow'))syNow.onclick=async()=>{syStat('busy','Syncing…');if(syDirty)await syPush();else await syPull();toast('Synced')};
+  if($id('sySignIn'))sySignIn.onclick=()=>syncOpen();
+  syShow.onclick=()=>syPhraseView(false);
+  syOff.onclick=()=>syConfirmOff();
+  if(sySession&&sb)sb.from('members').select('user_id',{count:'exact',head:true}).eq('household_id',SY.hid).then(r=>{if(r&&r.count!=null&&$id('syPeople'))syPeople.textContent=r.count+' of 5 people in this household'})}
+const $id=id=>document.getElementById(id);
+function syClose(){syncBg.classList.remove('on')}
+async function syncOpen(){syncBg.classList.add('on');syncBody.innerHTML='<p class="muted">Loading…</p>';
+  try{await syClient()}catch(e){syncBody.innerHTML=`<h3>Can't reach sync</h3><p class="muted">${esc(e.message||'Check your internet connection.')}</p><div class="bar"><button class="btn" onclick="syClose()">Close</button></div>`;return}
+  if(!sySession)return syEmailStep(SY.email?'in':'up');if(SY.hid){syClose();syPull();syListen();return}syChooseStep()}
+function syEmailStep(mode){mode=mode||'in';const up=mode==='up';
+  syncBody.innerHTML=`<h3>${up?'Create your account':'Sign in'}</h3><p class="muted" style="font-size:14px">${up?'Each person in your household uses their own email and password.':'Use the email and password for your Stacks account.'}</p>
+  <label class="f">Email</label><input id="syEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="${esc(SY.email||'')}">
+  <label class="f">Password</label><input id="syPw" type="password" autocomplete="${up?'new-password':'current-password'}" placeholder="${up?'At least 8 characters':''}">
+  ${up?'<label class="f">Password again</label><input id="syPw2" type="password" autocomplete="new-password">':''}<div class="err" id="syErr"></div>
+  <div class="bar"><button class="btn" id="syX">Cancel</button><button class="btn pri" id="syGo">${up?'Create account':'Sign in'}</button></div>
+  <p style="font-size:14px;text-align:center;margin:14px 0 0"><a href="#" id="sySwap" style="color:var(--accent)">${up?'Already have an account? Sign in':'New here? Create an account'}</a></p>`;
+  syX.onclick=syClose;sySwap.onclick=e=>{e.preventDefault();syEmailStep(up?'in':'up')};
+  [syEmail,syPw].forEach(i=>i.oninput=()=>syErr.textContent='');
+  syGo.onclick=async()=>{const em=syEmail.value.trim(),pw=syPw.value;if(!/^\S+@\S+\.\S+$/.test(em)){syErr.textContent='Enter a valid email';return}
+    if(pw.length<8){syErr.textContent='Password needs at least 8 characters';return}if(up&&pw!==syPw2.value){syErr.textContent='The two passwords don\'t match';return}
+    syGo.disabled=true;const lbl=syGo.textContent;syGo.textContent=up?'Creating…':'Signing in…';
+    const r=up?await sb.auth.signUp({email:em,password:pw}):await sb.auth.signInWithPassword({email:em,password:pw});syGo.disabled=false;syGo.textContent=lbl;
+    if(r.error){const m=r.error.message||'';syErr.textContent=/invalid login/i.test(m)?'Email or password is wrong.':/already registered|already exists/i.test(m)?'That email already has an account. Sign in instead.':/not confirmed/i.test(m)?'Confirm your email first (check your inbox), then sign in.':m;return}
+    SY.email=em;sySave();
+    if(!r.data.session){syncBody.innerHTML=`<h3>Check your email</h3><p style="font-size:14px">We sent a confirmation link to <b>${esc(em)}</b>. Tap it, then come back here and sign in.</p><div class="bar"><button class="btn pri" id="syGo2">Sign in</button></div>`;syGo2.onclick=()=>syEmailStep('in');return}
+    sySession=r.data.session;if(SY.hid){syClose();syStart();return}syChooseStep()}}
+function syChooseStep(){syncBody.innerHTML=`<h3>Set up sync</h3><p class="muted" style="font-size:14px">Is this the first device, or does your household already sync on another one?</p>
+  <div class="bar"><button class="btn pri" id="syNew">This is the first device</button></div><p class="muted" style="font-size:12px;margin:4px 0 0">Starts your household with the budget on this device.</p>
+  <div class="bar"><button class="btn" id="syJoin">Join with a recovery phrase</button></div><p class="muted" style="font-size:12px;margin:4px 0 0">Use this on your other phones and computers.</p>
+  <div class="bar"><button class="btn" id="syX">Cancel</button></div>`;syX.onclick=syClose;syNew.onclick=syNewStep;syJoin.onclick=syJoinStep}
+function wordsGrid(p){return'<div class="words">'+p.split(' ').map((w,i)=>`<span><small>${i+1}</small>${w}</span>`).join('')+'</div>'}
+let syPending='';
+function syNewStep(){syPending=newPhrase();syncBody.innerHTML=`<h3>Your recovery phrase</h3><p style="font-size:14px">These 12 words lock and unlock your budget. <b>Write them on paper</b> and keep them with your important documents.</p>${wordsGrid(syPending)}
+  <p class="muted" style="font-size:13px">You'll type them once on each phone or PC that joins. If you lose these words and every device, your synced budget can't be recovered by anyone.</p>
+  <label style="display:flex;gap:10px;align-items:center;font-size:14px;margin:10px 0"><input type="checkbox" id="syAck" style="width:22px;height:22px">I've written down all 12 words</label><div class="err" id="syErr"></div>
+  <div class="bar"><button class="btn" id="syBack">Back</button><button class="btn pri" id="syGo">Start syncing</button></div>`;
+  syBack.onclick=syChooseStep;syGo.onclick=async()=>{if(!syAck.checked){syErr.textContent='Write the words down first, then tick the box';return}syGo.disabled=true;syGo.textContent='Locking your budget…';
+    try{const d=await deriveAll(syPending);SY.key=d.keyRaw;syKey=null;const enc=await syEncrypt(syState());const{data,error}=await sb.rpc('create_household',{p_join_hash:d.joinHash,p_iv:enc.iv,p_data:enc.data});if(error)throw error;
+      SY.hid=data;SY.ver=1;SY.phrase=syPending;SY.last=Date.now();sySave();syPending='';syClose();syStat('ok','Synced');renderSyncCard();syListen();toast('Sync is on. Now join from your other devices.')}
+    catch(e){SY.key=null;syKey=null;syErr.textContent='Couldn\'t start sync: '+(e.message||'unknown error');syGo.disabled=false;syGo.textContent='Start syncing'}}}
+function syJoinStep(){syncBody.innerHTML=`<h3>Join your household</h3><p class="muted" style="font-size:14px">Type the 12 words from your first device, in order, with spaces between.</p>
+  <textarea id="syWords" rows="3" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="word word word …"></textarea><div class="err" id="syErr"></div>
+  <p class="muted" style="font-size:13px">Joining replaces the budget on this device with your household's. If this device has something you want to keep, copy a backup first.</p>
+  <div class="bar"><button class="btn" id="syBack">Back</button><button class="btn pri" id="syGo">Join</button></div>`;
+  syWords.oninput=()=>syErr.textContent='';syBack.onclick=syChooseStep;syGo.onclick=async()=>{const p=normPhrase(syWords.value),ws=p?p.split(' '):[];
+    if(ws.length!==12){syErr.textContent=`That's ${ws.length} words. It needs exactly 12.`;return}const bad=ws.filter(w=>!WORDS.includes(w));if(bad.length){syErr.textContent='Check the spelling of: '+bad.join(', ');return}
+    syGo.disabled=true;syGo.textContent='Unlocking…';
+    try{const d=await deriveAll(p);const{data,error}=await sb.rpc('join_household',{p_token:d.token});if(error)throw error;
+      SY.key=d.keyRaw;syKey=null;SY.hid=data;SY.ver=0;SY.phrase=p;sySave();await syPull(true);syClose();syListen();toast('Joined. This device is now in sync.')}
+    catch(e){SY.hid=null;SY.key=null;syKey=null;sySave();syErr.textContent=(e.message||'').includes('No household')?'No household matches those words. Check each word and the order.':'Couldn\'t join: '+(e.message||'unknown error');syGo.disabled=false;syGo.textContent='Join'}}}
+function syPhraseView(){syncBg.classList.add('on');syncBody.innerHTML=`<h3>Recovery phrase</h3><p class="muted" style="font-size:14px">Anyone with these words can read your budget. Only show them to people in your household.</p>
+  <div id="syHid"><div class="bar"><button class="btn pri" id="syReveal">Show the 12 words</button></div></div><div class="bar"><button class="btn" id="syX">Close</button></div>`;
+  syX.onclick=syClose;syReveal.onclick=()=>{syHid.innerHTML=SY.phrase?wordsGrid(SY.phrase):'<p class="muted">This device doesn\'t have the phrase saved.</p>'}}
+function syConfirmOff(){syncBg.classList.add('on');syncBody.innerHTML=`<h3>Turn off sync here?</h3><p style="font-size:14px">This device keeps its current budget but stops syncing. Other devices aren't affected. To sync again, you'll need the 12 words.</p>
+  <div class="bar"><button class="btn" id="syX">Cancel</button><button class="btn dng" id="syYes">Turn off</button></div>`;syX.onclick=syClose;
+  syYes.onclick=async()=>{try{if(syChan&&sb){sb.removeChannel(syChan);syChan=null}if(sb)await sb.auth.signOut({scope:'local'})}catch(e){}
+    SY={hid:null,ver:0,phrase:'',key:null,email:SY.email,last:0};syKey=null;sySave();syClose();syStat('','');renderSyncCard();toast('Sync turned off on this device')}}
+
 loadCfg();syncSettings();setRange(cfg.range);
 load();loadInc();loadPlan();loadHist();render();show('bills');
-if(!bills.length&&!income.length&&!cfg.setupDone)wizOpen();
+syLoad();if(!bills.length&&!income.length&&!cfg.setupDone&&!SY.hid)wizOpen();
+syStart();
 histBtn.onclick=()=>{renderHist();histBg.classList.add('on')};histClose.onclick=()=>histBg.classList.remove('on');
 window.addEventListener('resize',()=>renderCols());
 window.addEventListener('orientationchange',()=>setTimeout(renderCols,200));
