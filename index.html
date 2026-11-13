@@ -92,6 +92,10 @@ textarea{width:100%;min-height:90px;font:12px ui-monospace,monospace;padding:10p
 .acct{display:inline-block;font-size:11px;font-weight:600;padding:1px 6px;border-radius:5px;background:var(--line);color:var(--text);margin-left:4px;vertical-align:1px}
 .sstat{margin-left:auto;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px}
 .sstat[hidden]{display:none}
+.intro{position:fixed;inset:0;z-index:100;background:linear-gradient(#267ed0 0%,#5aa8d6 42%,#2e96aa 58%,#2a8aa0 100%);display:flex;align-items:center;justify-content:center;transition:opacity .35s ease;cursor:pointer}
+.intro.out{opacity:0;pointer-events:none}
+.intro video{width:100%;height:100%;object-fit:contain;background:transparent}
+.intro .skip{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));left:0;right:0;text-align:center;color:rgba(255,255,255,.85);font-size:13px;letter-spacing:.3px;text-shadow:0 1px 3px rgba(0,0,0,.35)}
 .pwrap{position:relative}.pwrap input{padding-right:48px}
 .eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--muted);width:42px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .eye svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -198,6 +202,18 @@ input,select{width:100%;font:inherit;font-size:16px;padding:10px;border-radius:1
 </style>
 </head>
 <body>
+<div class="intro" id="intro"><video id="introV" muted playsinline webkit-playsinline preload="auto" disablepictureinpicture></video><div class="skip">Tap to skip</div></div>
+<script>(function(){var el=document.getElementById('intro'),v=document.getElementById('introV'),done=false,url=null,c={};
+try{c=JSON.parse(localStorage.getItem('billColumns.cfg2')||'{}')}catch(e){}
+var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function finish(){if(done)return;done=true;el.classList.add('out');setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);if(url)URL.revokeObjectURL(url)},380)}
+if(c.intro===false||reduce||!window.fetch){el.parentNode.removeChild(el);return}
+v.style.objectFit=(innerWidth/innerHeight<0.75)?'cover':'contain';
+el.addEventListener('click',finish);v.addEventListener('ended',finish);v.addEventListener('error',finish);
+var startT=setTimeout(finish,2500);setTimeout(finish,6000);
+fetch('intro.mp4').then(function(r){if(!r.ok)throw 0;return r.blob()}).then(function(b){if(done)return;url=URL.createObjectURL(b);v.src=url;
+  var p=v.play();if(p&&p.then)p.then(function(){clearTimeout(startT)}).catch(finish);else clearTimeout(startT)}).catch(finish);
+window.__introSkip=finish})();</script>
 <div class="wrap">
   <div class="brand" id="brandBar"><img class="logo" src="data:image/jpeg;base64,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" alt="" aria-hidden="true">Stacks <span>AI</span><span class="sstat" id="syncStat" hidden><i></i><span></span></span></div>
   <section id="vBills">
@@ -263,6 +279,7 @@ input,select{width:100%;font:inherit;font-size:16px;padding:10px;border-radius:1
     <div class="card">
       <div class="set"><div class="nm"><b>Theme</b><small>Light, medium grey, or dark</small></div>
         <select id="sTheme"><option value="light">Light</option><option value="medium">Medium</option><option value="dark">Dark</option></select></div>
+      <div class="set"><div class="nm"><b>Play intro when the app opens</b><small>The 2-second piggy intro. Tap it to skip anytime.</small></div><label class="tg"><input type="checkbox" id="sIntro"><span></span></label></div>
     </div>
     <div class="sec">Bills settings</div>
     <div class="card">
@@ -474,7 +491,7 @@ const KEY='billColumns.v2',CKEY='billColumns.cfg2',IKEY='billColumns.income2';
 let income=[];
 function saveInc(){try{localStorage.setItem(IKEY,JSON.stringify(income))}catch(e){}if(window.syncQueue)syncQueue()}
 function loadInc(){try{const s=localStorage.getItem(IKEY);if(s)income=JSON.parse(s)}catch(e){}}
-let cfg={remind:3,warn:14,warnBi:14,range:30,layout:'vertical',landWide:true,theme:'light',lArrange:false,lSort:'due',bArrange:true,bSort:'due',budgetOrder:[]};
+let cfg={intro:true,remind:3,warn:14,warnBi:14,range:30,layout:'vertical',landWide:true,theme:'light',lArrange:false,lSort:'due',bArrange:true,bSort:'due',budgetOrder:[]};
 function saveCfg(){try{localStorage.setItem(CKEY,JSON.stringify(cfg))}catch(e){}}
 function loadCfg(){try{const s=localStorage.getItem(CKEY);if(s)cfg={...cfg,...JSON.parse(s)}}catch(e){}}
 let bills=[],range=30,simDays=0,editId=null,selColor=COLORS[0],payId=null;
@@ -688,13 +705,14 @@ sWarnBi.onchange=()=>{cfg.warnBi=+sWarnBi.value;saveCfg();render()};
 sRemind.onchange=()=>{cfg.remind=+sRemind.value;saveCfg();renderAlert()};
 sRange.onchange=()=>{cfg.range=+sRange.value;saveCfg();setRange(cfg.range)};
 sLayout.onchange=()=>{cfg.layout=sLayout.value;saveCfg();syncSettings();renderCols()};
-function syncSettings(){sRemind.value=cfg.remind;sTheme.value=cfg.theme;document.documentElement.dataset.theme=cfg.theme;
+function syncSettings(){sIntro.checked=cfg.intro!==false;sRemind.value=cfg.remind;sTheme.value=cfg.theme;document.documentElement.dataset.theme=cfg.theme;
   sLArr.checked=cfg.lArrange;sLSort.value=cfg.lSort;rLSort.style.display=cfg.lArrange?'':'none';
   sBArr.checked=cfg.bArrange;sBSort.value=cfg.bSort;rBSort.style.display=cfg.bArrange?'':'none';
   firstWhere.textContent=cfg.layout==='horizontal'?'on top':'on the left';
   sLayout.value=cfg.layout;sLand.checked=cfg.landWide;document.body.classList.toggle('landwide',cfg.landWide);
   sWarn.value=cfg.warn;sWarnBi.value=cfg.warnBi;sRange.value=cfg.range}
 sTheme.onchange=()=>{cfg.theme=sTheme.value;saveCfg();syncSettings()};
+sIntro.onchange=()=>{cfg.intro=sIntro.checked;saveCfg()};
 sLArr.onchange=()=>{if(!sLArr.checked&&cfg.lArrange){bills=CATS.flatMap(([k])=>listOrder().filter(b=>catOf(b)===k));save()}cfg.lArrange=sLArr.checked;saveCfg();syncSettings();renderList()};
 sLSort.onchange=()=>{cfg.lSort=sLSort.value;saveCfg();renderList()};
 sBArr.onchange=()=>{if(!sBArr.checked&&cfg.bArrange)cfg.budgetOrder=colOrder().map(b=>b.id);cfg.bArrange=sBArr.checked;saveCfg();syncSettings();renderCols()};
