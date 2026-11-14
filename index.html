@@ -166,6 +166,17 @@ textarea{width:100%;min-height:90px;font:12px ui-monospace,monospace;padding:10p
 .amt small{display:block;font-weight:400;font-size:12px}
 .pill{font-size:11px;padding:2px 7px;border-radius:6px;font-weight:600;white-space:nowrap}
 .st-g{background:var(--g-bg);color:var(--g-tx)}.st-y{background:var(--y-bg);color:var(--y-tx)}.st-r{background:var(--r-bg);color:var(--r-tx)}
+#list .brow{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;grid-template-areas:"g i n a" "g i m m";column-gap:9px;row-gap:3px;align-items:center;padding:9px 0}
+#list .brow .grip{grid-area:g;width:22px;height:34px;margin-left:-6px}
+#list .brow .bic,#list .brow .sw{grid-area:i}
+#list .brow .bic{width:32px;height:32px}
+#list .brow .nm{grid-area:n}
+#list .brow .nm b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.25}
+#list .brow .amt{grid-area:a;align-self:start;white-space:nowrap;line-height:1.25}
+#list .brow .bmeta{grid-area:m;display:flex;flex-wrap:wrap;align-items:center;gap:3px 8px;min-width:0}
+#list .brow .bmeta small{font-size:11.5px;line-height:1.35;color:var(--muted)}
+#list .brow .bmeta small span{white-space:nowrap}
+#list .brow .pill{font-size:10.5px;padding:1px 6px;line-height:1.4}
 .btn{font:inherit;font-size:15px;padding:11px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer}
 .btn.pri{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:600}
 .btn.dng{color:var(--red);border-color:var(--red)}
@@ -561,10 +572,10 @@ let catTouched=false;
 function renderList(){const L=document.getElementById('list');const s=listOrder();
   if(!s.length){L.innerHTML='<div class="card"><div class="empty">Add your first bill to get started.</div></div>'}
   else L.innerHTML=CATS.map(([k,lab])=>{const g=s.filter(b=>catOf(b)===k);if(!g.length)return'';
-    return`<div class="grp-h"><b>${lab}</b><span>about ${money(Math.round(g.reduce((a,b)=>a+perMonth(b),0)))}/month</span></div><div class="card">`+g.map(b=>{const st=stOf(b);return`<div class="row" data-id="${b.id}"><span class="grip" aria-label="Drag to reorder"><svg viewBox="0 0 10 16"><circle cx="2.5" cy="2.5" r="1.6"/><circle cx="7.5" cy="2.5" r="1.6"/><circle cx="2.5" cy="8" r="1.6"/><circle cx="7.5" cy="8" r="1.6"/><circle cx="2.5" cy="13.5" r="1.6"/><circle cx="7.5" cy="13.5" r="1.6"/></svg></span>${icoHTML(b)||`<span class="sw" style="background:${b.color}"></span>`}
-    <div class="nm"><b>${esc(b.name)}</b><small>${repeatText(b)} · ${esc(acctName(acctOf(b)))}</small></div>
-    <span class="pill st-${st}">${fmtD(parse(b.due))} · ${dueText(b)}</span>
-    <div class="amt">${b.variable?'~':''}${money(b.amount)}</div></div>`}).join('')+'</div>'}).join('');
+    return`<div class="grp-h"><b>${lab}</b><span>about ${money(Math.round(g.reduce((a,b)=>a+perMonth(b),0)))}/month</span></div><div class="card">`+g.map(b=>{const st=stOf(b);return`<div class="row brow" data-id="${b.id}"><span class="grip" aria-label="Drag to reorder"><svg viewBox="0 0 10 16"><circle cx="2.5" cy="2.5" r="1.6"/><circle cx="7.5" cy="2.5" r="1.6"/><circle cx="2.5" cy="8" r="1.6"/><circle cx="7.5" cy="8" r="1.6"/><circle cx="2.5" cy="13.5" r="1.6"/><circle cx="7.5" cy="13.5" r="1.6"/></svg></span>${icoHTML(b)||`<span class="sw" style="background:${b.color}"></span>`}
+    <div class="nm"><b>${esc(b.name)}</b></div>
+    <div class="amt">${b.variable?'~':''}${money(b.amount)}</div>
+    <div class="bmeta"><small>${[...repeatText(b).split(' · '),acctName(acctOf(b))].map(x=>`<span>${esc(x)}</span>`).join(' · ')}</small><span class="pill st-${st}">${fmtD(parse(b.due))} · ${dueText(b)}</span></div></div>`}).join('')+'</div>'}).join('');
   L.querySelectorAll('.row').forEach(r=>{r.onclick=()=>openEdit(r.dataset.id);const g=r.querySelector('.grip');g.onclick=e=>e.stopPropagation();g.onpointerdown=e=>startDrag(e,r)});
   document.getElementById('tot30').textContent=money(bills.filter(b=>daysUntil(b.due)<=30).reduce((a,b)=>a+ +b.amount,0))}
 
