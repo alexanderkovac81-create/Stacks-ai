@@ -1,6 +1,6 @@
-const CACHE='stacks-ai-56175268';
+const CACHE='stacks-ai-91185659';
 const FILES=['./','./index.html','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png','./intro.mp4'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==self.location.origin&&!/^https:\/\/cdn\.jsdelivr\.net\/npm\/(@supabase\/|tesseract\.js@|tesseract\.js-core@|@tesseract\.js-data\/)/.test(u.href))return;
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==self.location.origin&&!/^https:\/\/cdn\.jsdelivr\.net\/npm\/(@supabase\/|tesseract\.js@|tesseract\.js-core@|@tesseract\.js-data\/|pdfjs-dist@)/.test(u.href))return;
   e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r}).catch(()=>caches.match(e.request).then(r=>r||caches.match('./index.html'))))});

@@ -408,6 +408,24 @@ body::before{background:var(--band,#121331)}
 .brand .bname{display:flex;flex-direction:column;line-height:1.05}
 .brand .bname b{font-size:19px;font-weight:800;letter-spacing:-.2px}
 .brand .bname small{font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.2px;margin-top:2px}
+
+details.more{margin-top:14px;border:1px solid var(--line);border-radius:14px;padding:2px 12px 12px}
+details.more summary{cursor:pointer;font-weight:700;font-size:14px;padding:10px 0 4px;color:var(--peri)}
+#varyBox .seg3{margin-top:2px}
+.pastrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.pastrow span{flex:1}.pastrow b{font-variant-numeric:tabular-nums}
+.pastrow button{border:0;background:none;color:var(--muted);font-size:20px;width:34px;height:30px;cursor:pointer;flex:none}
+.pastadd{margin-top:8px}.btn.addchq{width:100%;margin-top:8px}
+details.more .two{align-items:flex-end}
+.schips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.schips button{border:1px solid var(--line);background:var(--chip);color:var(--muted);border-radius:999px;padding:7px 11px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.schips button.on{background:var(--seg-bg);color:var(--seg-tx);border-color:var(--seg-bg)}
+.stubok{color:var(--ok)}
+.shprev{margin-top:14px;background:var(--chip);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:13px}
+.shprev b{display:block;font-size:13px;margin-bottom:4px}
+.shprev .ln{display:flex;justify-content:space-between;gap:8px;padding:4px 0}.shprev .ln span:last-child{font-weight:700;white-space:nowrap}
+.lnkbtn{display:block;width:100%;text-align:left;border:0;background:none;color:var(--peri);font:inherit;font-size:13px;font-weight:700;padding:8px 0 4px;cursor:pointer}
+#payClear{white-space:nowrap}
 </style>
 </head>
 <body>
@@ -565,6 +583,11 @@ window.__introSkip=finish})();</script>
 <div class="toast" id="toast"></div>
 <div class="sheet-bg" id="insExBg"><div class="sheet"><h3>Export insights</h3><p class="muted" style="font-size:14px;margin:0 0 6px" id="insExLab"></p>
   <div class="bar" style="flex-direction:column"><button class="btn pri" id="insCsv">Spreadsheet (CSV file)</button><button class="btn" id="insPdf">PDF or print</button><button class="btn" id="insExCancel">Cancel</button></div><div class="ok" id="insExMsg"></div></div></div>
+<div class="sheet-bg" id="payAmtBg"><div class="sheet"><h3 id="payAmtTitle">Payday!</h3><p id="payQ" style="margin:0 0 6px"></p>
+  <label class="f" for="payAmtIn">Amount ($)</label><input id="payAmtIn" class="bigamt" type="number" inputmode="decimal" step="0.01" min="0">
+  <button type="button" class="btn addchq" id="payStubBtn">Read my pay stub (PDF or photo)</button><input type="file" id="payStubIn" accept="application/pdf,image/*" hidden>
+  <div class="hint" id="payNote"></div><div class="err" id="payAmtErr"></div>
+  <div class="bar"><button class="btn" id="payLater">Later</button><button class="btn" id="payClear">Use estimate</button><button class="btn pri" id="paySaveBtn">Save</button></div></div></div>
 <nav class="bot"><div class="pillnav">
   <button id="nBills" class="on" aria-label="Bills"><svg viewBox="0 0 24 24"><path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17l-3-2-2.5 2-2.5-2-2.5 2L6 19z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>Bills</button>
   <button id="nBudget" aria-label="Budget"><svg viewBox="0 0 24 24"><path d="M3 21h18"/><rect x="5" y="12" width="3" height="9"/><rect x="10.5" y="7" width="3" height="14"/><rect x="16" y="3" width="3" height="18"/></svg>Budget</button>
@@ -616,12 +639,56 @@ window.__introSkip=finish})();</script>
   <h3 id="incTitle">Add income</h3>
   <label class="f">Name</label><input id="iName" placeholder="My pay">
   <div class="two">
-    <div><label class="f">Amount ($)</label><input id="iAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="2400"></div>
+    <div id="iAmtWrap"><label class="f" id="iAmtLab">Amount ($)</label><input id="iAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="2400"></div>
     <div id="iDateWrap"><label class="f">Next pay date</label><input id="iDate" type="date"></div>
   </div>
   <label class="f">How often</label>
   <select id="iFreq"><option value="biweekly">Bi-weekly</option><option value="weekly">Weekly</option><option value="semi">Twice a month (like the 15th and last day)</option><option value="monthly">Monthly</option><option value="once">One time</option></select>
   <div class="two" id="semiBox"><div><label class="f">First payday</label><select id="iD1"></select></div><div><label class="f">Second payday</label><select id="iD2"></select></div></div>
+  <div class="set" style="border:0;padding:12px 0 0"><div class="nm"><b>My pay changes each cheque</b><small>Shift work, overtime or commission. Stacks guesses each cheque and asks for the real amount on payday.</small></div><label class="tg"><input type="checkbox" id="iVary"><span></span></label></div>
+  <div id="varyBox" hidden>
+    <label class="f">Guess each cheque from</label>
+    <div class="seg3" role="group" aria-label="Guess from"><button type="button" data-est="avg">Past cheques</button><button type="button" data-est="shift">My shifts</button></div>
+    <div id="shBox">
+      <div class="two"><div><label class="f">Hourly rate ($)</label><input id="shRate" type="number" inputmode="decimal" step="0.01" min="0" placeholder="35.00"></div><div><label class="f">Hours per shift</label><input id="shHrs" type="number" inputmode="decimal" step="0.25" min="0" placeholder="12"></div></div>
+      <label class="f">Your rotation</label><select id="shRot"></select>
+      <div id="shCust"><div class="two"><div><label class="f">Days on</label><input id="shOn" type="number" inputmode="numeric" min="1" max="28" placeholder="4"></div><div><label class="f">Days off</label><input id="shOff" type="number" inputmode="numeric" min="0" max="28" placeholder="4"></div></div>
+        <div class="set" style="border:0;padding:10px 0 0"><div class="nm"><b>Swaps between days and nights</b><small>A set of days, time off, a set of nights, time off</small></div><label class="tg"><input type="checkbox" id="shCustN"><span></span></label></div></div>
+      <label class="f" id="shAncLab">First day of your next set</label><input id="shAnc" type="date">
+      <label class="f" id="shLagLab">Each cheque pays for the 2 weeks up to</label><select id="shLag"></select>
+      <details class="more" id="shMore"><summary>Premiums</summary>
+        <div class="two"><div><label class="f">Extra per day ($)</label><input id="shXd" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0"></div><div id="shXnW"><label class="f">Extra per night ($)</label><input id="shXn" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0"></div></div>
+        <div class="hint">Extra pay per shift, like shift premiums.</div>
+        <div class="two"><div><label class="f">Every cheque ($)</label><input id="shXc" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0"></div><div><label class="f">Every 2nd cheque ($)</label><input id="shAltP" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0"></div></div>
+        <div class="hint">Extra pay on every cheque, or only every second one.</div>
+      </details>
+      <details class="more" id="shTaxD"><summary>Tax and deductions</summary>
+        <label class="f">Take-home</label><select id="shTax"><option value="bc">Work out tax for me (BC)</option><option value="pct">Use a take-home %</option></select>
+        <div id="shTaxBox"><label class="f">Pension or RRSP from pay (% of base pay)</label><input id="shPens" type="number" inputmode="decimal" step="0.1" min="0" max="50" placeholder="0">
+          <div class="hint" id="shTaxHint"></div></div>
+        <div id="shPctBox"><label class="f">Take-home after tax and deductions (%)</label><input id="shPct" type="number" inputmode="decimal" step="0.1" min="1" max="100" placeholder="Auto">
+          <div class="hint" id="shPctHint"></div>
+          <div class="two"><div><label class="f">January dip ($ off)</label><input id="shJan" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0"></div><div><label class="f">Back to normal</label><select id="shJanTo"></select></div></div>
+          <div class="hint">CPP and EI start coming off again every January, until you hit the yearly max.</div></div>
+        <label class="f">Every 2nd cheque, taken off ($)</label><input id="shAlt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0"><label class="f">Next cheque it comes off</label><input id="shAltD" type="date">
+        <div class="hint">After-tax deductions that only come off some cheques, like insurance.</div>
+      </details>
+      <details class="more" id="shStatD"><summary>Stat holidays</summary>
+        <div class="hint">Tap the ones you get paid for.</div>
+        <div class="schips" id="shStats" role="group" aria-label="Stat holidays"></div>
+        <div class="two"><div><label class="f">Working one pays extra (× pay)</label><input id="shStatW" type="number" inputmode="decimal" step="0.25" min="0" max="3" placeholder="0.5"></div><div><label class="f">Day off pays (hours)</label><input id="shStatH" type="number" inputmode="decimal" step="0.25" min="0" placeholder="Shift"></div></div>
+        <div class="set" style="border:0;padding:10px 0 0"><div class="nm"><b>Stat pay on top</b><small>When you work a stat. BC's basic rule. Turn it off if your stubs only show the extra.</small></div><label class="tg"><input type="checkbox" id="shStatPW"><span></span></label></div>
+      </details>
+    </div>
+    <label class="f">Real cheques (take-home)</label>
+    <div id="pastList"></div>
+    <div class="two pastadd"><div><input id="pastD" type="date" aria-label="Cheque date"></div><div><input id="pastA" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Amount" aria-label="Cheque amount"></div></div><button type="button" class="btn addchq" id="pastAdd">Add this cheque</button>
+    <button type="button" class="btn addchq" id="stubBtn">Read a pay stub (PDF or photo)</button><input type="file" id="stubIn" accept="application/pdf,image/*" hidden>
+    <div class="hint" id="stubStat"></div>
+    <div class="hint" id="pastHint"></div>
+    <div class="shprev" id="shPrev"></div>
+    <label class="f">Remind me to add my pay stub</label><select id="iStubD"><option value="0">On payday</option><option value="1">1 day before payday</option><option value="2">2 days before payday</option><option value="3">3 days before payday</option><option value="4">4 days before payday</option><option value="5">5 days before payday</option></select>
+  </div>
   <div class="hint">If two people are paid bi-weekly on opposite weeks, add each pay on its own. Together they come in every week.</div>
   <div class="err" id="iErr"></div>
   <div class="bar"><button class="btn" id="iCancel">Cancel</button><button class="btn pri" id="iSave">Save</button></div>
@@ -717,7 +784,7 @@ window.__introSkip=finish})();</script>
 
 <div class="sheet-bg" id="payBg"><div class="sheet">
   <h3 id="payTitle"></h3><div id="payInfo" style="color:var(--muted);font-size:14px"></div>
-  <label class="f">Amount paid ($)</label><input id="payAmt" type="number" inputmode="decimal" step="0.01" min="0">
+  <label class="f">Amount paid ($)</label><input id="payBillAmt" type="number" inputmode="decimal" step="0.01" min="0">
   <div class="err" id="payErr"></div>
   <div class="bar"><button class="btn" id="payCancel">Not yet</button><button class="btn pri" id="payOk">Mark paid</button></div>
   <div class="bar"><button class="btn" id="paySkip">Skip this time</button><button class="btn" id="payEdit">Edit bill</button></div>
@@ -780,7 +847,7 @@ let catTouched=false;
 let billFilter='all';
 const SUBS_IC=new Set(['stream','music','gaming','cloud']);
 function isSub(b){return SUBS_IC.has(b.icon)||/netflix|spotify|disney|crave|prime video|youtube|apple tv|apple music|icloud|google one|dropbox|xbox|playstation|nintendo|patreon|subscription|chatgpt|claude/i.test(b.name||'')}
-function incPerMonth(){return income.reduce((a,x)=>a+x.amount*({weekly:52/12,biweekly:26/12,semi:2,monthly:1}[x.freq]||0),0)}
+function incPerMonth(){return income.reduce((a,x)=>a+usualPay(x)*({weekly:52/12,biweekly:26/12,semi:2,monthly:1}[x.freq]||0),0)}
 function renderCost(){const B=bills.reduce((a,b)=>a+perMonth(b),0),I=incPerMonth();if(!bills.length){costCard.innerHTML='';return}
   let h=`<div class="pcard cost"><div class="sb"><b class="muted" style="font-size:14px">Cost to be</b><small class="muted">per month</small></div><div class="cbig">${money(Math.round(B))}${I>0?` <span>of ${money(Math.round(I))} income</span>`:''}</div>`;
   if(I>0){const pc=B/I*100,over=B>I;h+=`<div class="cbar"><i style="width:${Math.min(100,pc)}%;background:${over?'var(--red)':'var(--peri)'}"></i></div><div class="sb" style="font-size:12px;font-weight:600;margin-top:8px"><span style="color:${over?'var(--red)':'var(--peri)'}">Bills ${Math.round(pc)}%</span>${over?`<span class="neg">${money(Math.round(B-I))} more than income</span>`:`<span class="lime">${money(Math.round(I-B))} left for living and goals</span>`}</div>`}
@@ -820,7 +887,7 @@ function incOcc(x,from,to){const out=[];
   let d=parse(x.date),n=0;while(d<=to&&n<6000){if(d>=from)out.push(d);if(x.freq==='once')break;n++;d=stepF(d,x.freq,x.anchor)}return out}
 function incNext(x){const t=today();return incOcc(x,t,addDays(t,800))[0]||null}
 function winTotals(start,end){const due=bills.reduce((a,b)=>a+b.amount*billOcc(b,off===0?null:start,end).length,0);
-  const inc=income.reduce((a,x)=>a+x.amount*incOcc(x,start,end).length,0);return{due,inc}}
+  const inc=income.reduce((a,x)=>a+incOcc(x,start,end).reduce((p,d)=>p+payAmt(x,d),0),0);return{due,inc}}
 function stAt(b,dd,late){if(late)return'r';const w=warnFor(b);return dd<=w?'y':'g'}
 function renderCols(dropId){if(cfg.budView==='cal'&&!vCols.hidden)renderCal();const chart=document.getElementById('chart');const s=colOrder();
   const start=addDays(today(),off),end=addDays(start,range),hz=cfg.layout==='horizontal',land=innerWidth>innerHeight;
@@ -924,22 +991,69 @@ function render(dropId){renderAlert();renderList();renderCols(dropId);renderInc(
 const FREQ={weekly:'Weekly',biweekly:'Bi-weekly',semi:'Twice a month',monthly:'Monthly',once:'One time'};
 function renderInc(){const L=document.getElementById('incList');
   L.innerHTML=income.length?income.map(x=>{const n=incNext(x);return`<div class="row" data-id="${x.id}"><span class="ic">$</span>
-    <div class="nm"><b>${esc(x.name)}</b><small>${FREQ[x.freq]}${x.freq==='semi'?' ('+ord(x.d1||15)+' and '+((x.d2||31)>=31?'last day':ord(x.d2))+')':''} · ${n?'next '+fmtD(n):'already paid'}</small></div><div class="amt pos">${money(x.amount)}</div></div>`}).join('')
+    <div class="nm"><b>${esc(x.name)}</b><small>${x.vary?'Varies · ':''}${FREQ[x.freq]}${x.freq==='semi'?' ('+ord(x.d1||15)+' and '+((x.d2||31)>=31?'last day':ord(x.d2))+')':''} · ${n?'next '+fmtD(n):'already paid'}</small></div><div class="amt pos">${n&&payEst(x,n)?'~':''}${money(n?payAmt(x,n):x.amount)}</div></div>`}).join('')
     :'<div class="empty">Add each paycheque, with its amount and next pay date.</div>';
   L.querySelectorAll('.row').forEach(r=>r.onclick=()=>openInc(r.dataset.id));
-  const t=today();inc30.textContent=money(income.reduce((a,x)=>a+x.amount*incOcc(x,t,addDays(t,30)).length,0))}
+  const t=today();inc30.textContent=money(income.reduce((a,x)=>a+incOcc(x,t,addDays(t,30)).reduce((p,d)=>p+payAmt(x,d),0),0))}
 let incId=null;
 function openInc(id){incId=id||null;const x=income.find(i=>i.id===id);incTitle.textContent=x?'Edit income':'Add income';iDelBar.style.display=x?'flex':'none';
-  iName.value=x?x.name:'';iAmt.value=x?x.amount:'';iDate.value=x?iso(incNext(x)||parse(x.date)):iso(today());iFreq.value=x?x.freq:'biweekly';iD1.value=x&&x.d1||15;iD2.value=x&&x.d2||31;syncInc();iErr.textContent='';incBg.classList.add('on')}
+  iName.value=x?x.name:'';iAmt.value=x?x.amount:'';iDate.value=x?iso(incNext(x)||parse(x.date)):iso(today());iFreq.value=x?x.freq:'biweekly';iD1.value=x&&x.d1||15;iD2.value=x&&x.d2||31;iVary.checked=!!(x&&x.vary);edOver={...(x&&x.over||{})};edEst=x&&x.est||'avg';const sh=x&&x.sh||{};
+  shRate.value=sh.rate||'';shHrs.value=sh.hrs||'';shRot.value=sh.rot||'4x4';shOn.value=sh.on||'';shOff.value=sh.off||'';shCustN.checked=!!sh.custN;shAnc.value=sh.anc||'';shLag.value=sh.lag||0;
+  shXd.value=sh.xd||'';shXn.value=sh.xn||'';shXc.value=sh.xc||'';shPct.value=sh.pct||'';shAlt.value=sh.alt||'';shAltD.value=sh.altD||'';shJan.value=sh.jan||'';shJanTo.value=sh.janTo||7;
+  shAltP.value=sh.altP||'';shTax.value=sh.tax||'pct';shPens.value=sh.pens||'';edStats=sh.stats?sh.stats.slice():STAT_BC.slice();shStatW.value=sh.statW!=null&&sh.statW!==''?sh.statW:'';shStatH.value=sh.statH!=null?sh.statH:'';shStatPW.checked=sh.statPW!=null?!!sh.statPW:true;
+  iStubD.value=x&&x.stubDays||0;edYtd=x&&x.ytd||null;stubStat.textContent='';
+  shMore.open=!!(sh.xd||sh.xn||sh.xc||sh.altP);shTaxD.open=!!(sh.pct||sh.alt||sh.jan||sh.pens||sh.tax==='bc');shStatD.open=false;pastA.value='';syncInc();iErr.textContent='';incBg.classList.add('on')}
+const STATDEF=[['ny',"New Year's"],['fam','Family Day'],['gf','Good Friday'],['em','Easter Monday'],['vic','Victoria Day'],['can','Canada Day'],['bcd','BC Day'],['lab','Labour Day'],['tr','Truth and Reconciliation'],['thx','Thanksgiving'],['rem','Remembrance Day'],['xmas','Christmas'],['box','Boxing Day']];
+const STAT_BC=['ny','fam','gf','vic','can','bcd','lab','tr','thx','rem','xmas'],STATN=Object.fromEntries(STATDEF);
+const ROT={'4x4':['4 on, 4 off','DDDD----'],'4d4n':['4 days, 4 off, 4 nights, 4 off','DDDD----NNNN----'],'2d2n':['2 days, 2 nights, 4 off','DDNN----'],'7d7n':['7 days, 7 off, 7 nights, 7 off','DDDDDDD-------NNNNNNN-------'],'7x7':['7 on, 7 off','DDDDDDD-------'],p223:['2-2-3 (Pitman)','DD--DDD--DD---'],'5x2':['5 on, 2 off (like Mon to Fri)','DDDDD--'],cust:['Something else',null]};
+const PLEN={weekly:7,biweekly:14,semi:15,monthly:30};
+let edOver={},edEst='avg',edStats=STAT_BC.slice(),edYtd=null;
+Object.keys(ROT).forEach(k=>shRot.innerHTML+=`<option value="${k}">${ROT[k][0]}</option>`);
+shLag.innerHTML='<option value="0">Payday</option>'+Array.from({length:14},(_,i)=>`<option value="${i+1}">${i+1} day${i?'s':''} before payday</option>`).join('');
+shJanTo.innerHTML=['Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m,i)=>`<option value="${i+2}">${m}</option>`).join('');
+function readSh(){return{rate:+shRate.value||0,hrs:+shHrs.value||0,rot:shRot.value,on:+shOn.value||0,off:+shOff.value||0,custN:shCustN.checked,anc:shAnc.value,lag:+shLag.value||0,
+  xd:+shXd.value||0,xn:+shXn.value||0,xc:+shXc.value||0,pct:+shPct.value||0,alt:+shAlt.value||0,altD:shAltD.value,jan:+shJan.value||0,janTo:+shJanTo.value||7,
+  altP:+shAltP.value||0,tax:shTax.value,pens:+shPens.value||0,stats:edStats.slice(),statW:shStatW.value===''?.5:+shStatW.value,statH:shStatH.value===''?'':+shStatH.value,statPW:shStatPW.checked}}
+function draftInc(){const sm=iFreq.value==='semi',dt=sm||!iDate.value?iso(today()):iDate.value;return{name:iName.value.trim()||'This pay',amount:parseFloat(iAmt.value)||0,date:dt,anchor:parse(dt).getDate(),freq:iFreq.value,d1:+iD1.value,d2:+iD2.value,vary:true,est:edEst,sh:readSh(),over:edOver,ytd:edYtd}}
+function syncVary(){const on=iVary.checked&&iFreq.value!=='once';varyBox.hidden=!on;if(!on)return;const sf=edEst==='shift';
+  document.querySelectorAll('[data-est]').forEach(b=>{const o=b.dataset.est===edEst;b.classList.toggle('on',o);b.setAttribute('aria-pressed',o)});
+  shBox.hidden=!sf;iAmtWrap.style.display=sf?'none':'';const P=rotPat(readSh());shCust.hidden=shRot.value!=='cust';shXnW.style.visibility=P.includes('N')?'visible':'hidden';
+  shAncLab.textContent=P.includes('N')?'First day shift of your next set':'First day of your next set';
+  const tx=shTax.value==='bc';shTaxBox.hidden=!tx;shPctBox.hidden=tx;
+  shStats.innerHTML=STATDEF.map(([k,n])=>`<button type="button" data-st="${k}" class="${edStats.includes(k)?'on':''}" aria-pressed="${edStats.includes(k)}">${n}</button>`).join('');
+  shStats.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{const k=b.dataset.st;edStats=edStats.includes(k)?edStats.filter(z=>z!==k):[...edStats,k];syncVary()});
+  const L=PLEN[iFreq.value]||14;shLagLab.textContent=`Each cheque pays for the ${L===7?'week':L===14?'2 weeks':'days'} up to`;
+  const x=draftInc(),ks=Object.keys(edOver).sort().reverse(),n=ks.length;
+  pastList.innerHTML=ks.map(k=>`<div class="pastrow"><span>${parse(k).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric'})}</span><b>${money(edOver[k])}</b><button type="button" data-rmk="${k}" aria-label="Remove">×</button></div>`).join('');
+  pastList.querySelectorAll('[data-rmk]').forEach(b=>b.onclick=()=>{delete edOver[b.dataset.rmk];syncVary()});
+  if(!pastD.dataset.touched){const back=x.freq==='semi'?[]:incOccCal(x,addDays(today(),-400),addDays(parse(x.date),-1)).reverse();const miss=back.find(d=>edOver[iso(d)]==null);pastD.value=miss?iso(miss):''}
+  pastHint.textContent=sf?(n?`Used to learn how much of your pay you take home. ${n<4?'Add a few more to sharpen it.':''}`:'Optional. Add a few past cheques and Stacks learns how much of your pay you take home.')
+    :(n<4?`Add at least 4 past cheques${n?' ('+n+' so far)':''}. 8 is best: for shift work that covers a full cycle.`:`Future cheques are guessed from the average of the last ${Math.min(n,8)}.`);
+  const lp=sf?learnPct(x):null;shPctHint.textContent=+shPct.value>0?(lp?`Your real cheques say ${lp}%.`:''):(lp?`Worked out from your real cheques: ${lp}%.`:'Leave blank to use 75% until you add real cheques.');
+  if(sf&&tx){const xx=draftInc();if(shiftOn(xx)){const a=Math.round(taxAdj(xx));shTaxHint.textContent=(Object.keys(edOver).length?(Math.abs(a)<1?'Your real cheques match the tax math.':`Fine-tuned from your real cheques: ${a>0?'+':'−'}${money(Math.abs(a))} a cheque.`):'Add real cheques and Stacks fine-tunes this.')+(edYtd?` CPP${edYtd.cpp2?', CPP2':''}${edYtd.ei?' and EI':''} maxed for ${edYtd.y}.`:'')}else shTaxHint.textContent=''}
+  let h='';const t=today();
+  if(sf&&shiftOn(x)){const ds=incOcc(x,t,addDays(t,200)).slice(0,4);h='<b>Your next cheques</b>'+ds.map(d=>{const i=shiftInfo(x,d),k=iso(d);return`<div class="ln"><span>${fmtD(d)} · ${i.n?i.d+' days, '+i.n+' nights':(i.d+i.n)+' shifts'}${i.stats.length?' + '+i.stats.join(', '):''}</span><span>${edOver[k]!=null?money(edOver[k]):'~'+money(Math.round(shiftEst(x,d)))}</span></div>`}).join('')}
+  else if(sf)h='Add your hourly rate, hours per shift and the first day of your next set to see your next cheques.';
+  else if(n)h=`<div class="ln"><span>Future cheques guessed at</span><span>~${money(usualPay({...x,est:'avg'}))}</span></div>`;
+  shPrev.innerHTML=h;shPrev.hidden=!h}
+document.querySelectorAll('[data-est]').forEach(b=>b.onclick=()=>{edEst=b.dataset.est;if(edEst==='shift'&&!shAnc.value)shAnc.value=iDate.value||iso(today());syncVary()});
+[shRate,shHrs,shRot,shOn,shOff,shCustN,shAnc,shLag,shXd,shXn,shXc,shPct,shAlt,shAltD,shJan,shJanTo,shAltP,shTax,shPens,shStatW,shStatH,shStatPW,iDate,iFreq].forEach(e=>e.addEventListener('input',()=>{if(!varyBox.hidden)syncVary()}));
+pastD.oninput=()=>{pastD.dataset.touched=1};
+pastAdd.onclick=()=>{const a=parseFloat(pastA.value);if(!pastD.value){iErr.textContent='Pick the cheque date';return}if(!(a>=0)||pastA.value===''){iErr.textContent='Enter the cheque amount';return}
+  edOver[pastD.value]=Math.round(a*100)/100;pastA.value='';delete pastD.dataset.touched;iErr.textContent='';syncVary();try{pastA.focus()}catch(_){}};
 const ord=n=>n+(n%10===1&&n!==11?'st':n%10===2&&n!==12?'nd':n%10===3&&n!==13?'rd':'th');
 for(let i=1;i<=28;i++){iD1.innerHTML+=`<option value="${i}">${ord(i)}</option>`;iD2.innerHTML+=`<option value="${i}">${ord(i)}</option>`}iD2.innerHTML+='<option value="31">Last day of the month</option>';
-function syncInc(){const sm=iFreq.value==='semi';semiBox.style.display=sm?'':'none';iDateWrap.style.visibility=sm?'hidden':'visible'}
-iFreq.onchange=syncInc;
+function syncInc(){iAmtLab.textContent=iVary.checked?'Usual amount ($)':'Amount ($)';const sm=iFreq.value==='semi';semiBox.style.display=sm?'':'none';iDateWrap.style.visibility=sm?'hidden':'visible';iAmtWrap.style.display='';syncVary()}
+iFreq.onchange=syncInc;iVary.onchange=syncInc;
 incAdd.onclick=()=>openInc();iCancel.onclick=()=>incBg.classList.remove('on');
 [iName,iAmt,iDate].forEach(i=>i.oninput=()=>iErr.textContent='');
 iSave.onclick=()=>{const n=iName.value.trim(),a=parseFloat(iAmt.value);
-  if(!n){iErr.textContent='Enter a name';return}if(iAmt.value===''||!(a>=0)){iErr.textContent='Enter an amount';return}const sm=iFreq.value==='semi';if(!sm&&!iDate.value){iErr.textContent='Pick the next pay date';return}if(sm&&+iD1.value===+iD2.value){iErr.textContent='Pick two different paydays';return}
-  const dt=sm?iso(today()):iDate.value;const d={name:n,amount:Math.round(a*100)/100,date:dt,anchor:parse(dt).getDate(),freq:iFreq.value,d1:+iD1.value,d2:+iD2.value};
+  const vb=iVary.checked&&iFreq.value!=='once',sf=vb&&edEst==='shift';
+  if(!n){iErr.textContent='Enter a name';return}
+  if(sf){const s=readSh();if(!(s.rate>0)){iErr.textContent='Enter your hourly rate';return}if(!(s.hrs>0)){iErr.textContent='Enter the hours in a shift';return}if(!s.anc){iErr.textContent='Pick the first day of your next set';return}}
+  else if(iAmt.value===''||!(a>=0)){iErr.textContent='Enter an amount';return}const sm=iFreq.value==='semi';if(!sm&&!iDate.value){iErr.textContent='Pick the next pay date';return}if(sm&&+iD1.value===+iD2.value){iErr.textContent='Pick two different paydays';return}
+  const dt=sm?iso(today()):iDate.value;const d={name:n,amount:a>=0?Math.round(a*100)/100:0,date:dt,anchor:parse(dt).getDate(),freq:iFreq.value,d1:+iD1.value,d2:+iD2.value,vary:iVary.checked};
+  if(vb){d.est=edEst;d.over={...edOver};d.stubDays=+iStubD.value||0;if(edYtd)d.ytd=edYtd;if(sf){d.sh=readSh();d.amount=usualPay({...d});}}
   if(incId)Object.assign(income.find(i=>i.id===incId),d);else income.push({id:Math.random().toString(36).slice(2),...d});
   saveInc();incBg.classList.remove('on');render()};
 iDel.onclick=()=>{income=income.filter(i=>i.id!==incId);saveInc();incBg.classList.remove('on');render()};
@@ -1028,7 +1142,7 @@ edDel.onclick=()=>{bills=bills.filter(x=>x.id!==editId);save();editBg.classList.
 function openPay(id){payId=id;const b=bills.find(x=>x.id===id);payTitle.textContent=b.name+' · '+money(b.amount);
   const last=b.mode==='limited'&&b.remaining<=1;
   payInfo.textContent=`Due ${fmtD(parse(b.due))} (${dueText(b)}). `+(last?'This is the last payment, so it clears for good.':'Paying it starts the next one: '+fmtD(nextDue(b))+'.')+(b.variable?' The amount is an estimate, so enter what the bill actually was.':'');
-  payAmt.value=b.amount;payErr.textContent='';payBg.classList.add('on')}
+  payBillAmt.value=b.amount;payErr.textContent='';payBg.classList.add('on')}
 function nextDue(b){return stepF(parse(b.due),b.freq,b.anchor)}
 payCancel.onclick=()=>payBg.classList.remove('on');
 payEdit.onclick=()=>{payBg.classList.remove('on');openEdit(payId)};
@@ -1049,10 +1163,10 @@ function undoHist(hid){const h=hist.find(x=>x.id===hid);if(!h)return;const later
   const i=bills.findIndex(x=>x.id===h.billId);if(i>=0)bills[i]=h.snap;else bills.splice(Math.min(h.pos,bills.length),0,h.snap);
   hist=hist.filter(x=>x.id!==hid);saveHist();save();render();if(!histBg.classList.contains('on'))toast('Undone');else renderHist()}
 function payFlow(type){const b=bills.find(x=>x.id===payId);if(!b)return;let amt=b.amount;
-  if(type==='paid'){amt=parseFloat(payAmt.value);if(!(amt>=0)||payAmt.value===''){payErr.textContent='Enter the amount paid';return}amt=Math.round(amt*100)/100}
+  if(type==='paid'){amt=parseFloat(payBillAmt.value);if(!(amt>=0)||payBillAmt.value===''){payErr.textContent='Enter the amount paid';return}amt=Math.round(amt*100)/100}
   payBg.classList.remove('on');const el=document.querySelector(`[data-bar="${payId}"]`);if(el&&!vCols.hidden)el.classList.add('clear');
   setTimeout(()=>settle(b,type,amt),el&&!vCols.hidden?720:0)}
-payOk.onclick=()=>payFlow('paid');paySkip.onclick=()=>payFlow('skipped');payAmt.oninput=()=>payErr.textContent='';
+payOk.onclick=()=>payFlow('paid');paySkip.onclick=()=>payFlow('skipped');payBillAmt.oninput=()=>payErr.textContent='';
 function renderHist(){const L=histList;const items=[...hist].reverse();const latest=new Set();const lastFor={};hist.forEach(h=>lastFor[h.billId]=h.id);
   const mStart=iso(new Date(today().getFullYear(),today().getMonth(),1));
   histSum.textContent='Paid this month: '+money(Math.round(hist.filter(h=>h.type==='paid'&&h.on>=mStart).reduce((a,h)=>a+h.amount,0)));
@@ -1083,7 +1197,7 @@ function allGoals(){const list=[...plan.goals,...bills.filter(b=>catOf(b)==='deb
   const ord=plan.order||[];const pos=g=>{const i=ord.indexOf(g.id);return i<0?1e6+list.indexOf(g):i};return list.sort((a,b)=>pos(a)-pos(b))}
 
 function buildCheques(t0,H){const spd=spendPerDay();
-  const ch=income.flatMap(x=>incOcc(x,t0,H).map(d=>({date:d,who:x.name,amount:x.amount}))).sort((a,b)=>a.date-b.date);
+  const ch=income.flatMap(x=>incOcc(x,t0,H).map(d=>({date:d,who:x.name,iid:x.id,amount:payAmt(x,d),est:payEst(x,d),shi:shiftOn(x)?shiftInfo(x,d):null}))).sort((a,b)=>a.date-b.date);
   if(WI&&WI.inc){const cpy=Math.max(1,ch.filter(c=>c.date<addDays(t0,365)).length);ch.forEach(c=>c.amount+=WI.inc*12/cpy)}
   ch.forEach((c,i)=>{c.days=i<ch.length-1?Math.max(0,Math.round((ch[i+1].date-c.date)/864e5)):7;c.spend=spd*c.days;c.bills=[]});return ch}
 function buildOccs(t0,H,cut){const occs=[];const gb=new Set(AG.filter(g=>g.fromBill).map(g=>g.fromBill));
@@ -1173,8 +1287,8 @@ function renderPlan(){const O=planOut;
     const into=Object.keys(byA).length?`<div class="ln t"><span>Set aside for bills</span><span></span></div>`+accts().filter(a=>byA[a.id]).map(a=>`<div class="ln"><span>Into ${esc(a.name)}</span><span>${money(r2(byA[a.id]))}</span></div>`).join('')+(Object.keys(byA).some(k=>!accts().find(a=>a.id===k))?'':''):'';
     const cd=iso(c.date),keys=[];const ck=(k,label,amt,cls)=>{keys.push(k);return`<label class="ckl"><input type="checkbox" data-tk="${esc(k)}"${plan.ticks&&plan.ticks[k]?' checked':''}><span class="ckn">${label}</span><span class="${cls||''}">${amt}</span></label>`};
     const bl=into+c.bills.map(b=>ck(cd+'|b|'+b.name+'|'+iso(b.due),`${esc(b.name)} <span class="acct">${esc(acctName(b.acct))}</span><small>due ${fmtD(b.due)}${b.n>1?' · 1 of '+b.n+' parts':''}</small>`,money(r2(b.part)))).join('');
-    el.innerHTML=`<div class="chq-h"><span class="ic">$</span><div class="nm"><b>${fmtD(c.date)}${c.date.getFullYear()!==t0.getFullYear()?' '+c.date.getFullYear():''} · ${esc(c.who)}</b><small>${c.short?'<span class="neg">short '+money(Math.round(c.short))+'</span>':tg?'to goals '+money(Math.round(tg)):'extra '+money(Math.round(Math.max(0,c.extra)))}</small></div><div class="amt pos">${money(c.amount)}</div></div>
-      <div class="chq-b">${bl||'<div class="ln"><span>No bills set aside from this cheque</span><span></span></div>'}<div class="ln"><span>Everyday spending · ${c.days} days</span><span>${money(Math.round(c.spend))}</span></div>
+    el.innerHTML=`<div class="chq-h"><span class="ic">$</span><div class="nm"><b>${fmtD(c.date)}${c.date.getFullYear()!==t0.getFullYear()?' '+c.date.getFullYear():''} · ${esc(c.who)}</b><small>${c.short?'<span class="neg">short '+money(Math.round(c.short))+'</span>':tg?'to goals '+money(Math.round(tg)):'extra '+money(Math.round(Math.max(0,c.extra)))}</small></div><div class="amt pos">${c.est?'~':''}${money(c.amount)}</div></div>
+      <div class="chq-b"><button class="lnkbtn" data-payamt="${c.iid}|${iso(c.date)}">${c.est?(c.shi?'Estimated from '+shiftTxt(c.shi)+' · set the real amount':'Estimated from your last cheques · set the real amount'):'Change this cheque\'s amount'}</button>${bl||'<div class="ln"><span>No bills set aside from this cheque</span><span></span></div>'}<div class="ln"><span>Everyday spending · ${c.days} days</span><span>${money(Math.round(c.spend))}</span></div>
       ${c.goals.map(x=>x.type==='save'?ck(cd+'|g|'+x.name,`Toward ${esc(x.name)}<small>Goal: ${m2(x.target)}</small>`,`${m2(x.give)} / ${m2(x.after)}`,'pos')
         :ck(cd+'|g|'+x.name,`Toward ${esc(x.name)}<small>Owed: ${m2(x.target)}</small>`,`${m2(x.give)} / ${m2(x.after)} left`,'pos')).join('')}
       ${c.short?`<div class="ln t"><span>Short this cheque</span><span class="neg">${money(Math.round(c.short))}</span></div>`:c.extra<-0.5?`<div class="ln t"><span>Topped up from money already in the account</span><span>${money(Math.round(-c.extra))}</span></div>`:`<div class="ln t"><span>Extra left</span><span>${money(Math.round(c.extra))}</span></div>`}
@@ -1183,6 +1297,7 @@ function renderPlan(){const O=planOut;
     const sm=el.querySelector('.chq-h small');const base=sm.innerHTML;const upd=()=>{const n=keys.filter(k=>plan.ticks&&plan.ticks[k]).length;sm.innerHTML=(keys.length&&n?`<span class="lime">${n} of ${keys.length} ticked</span> · `:'')+base};upd();
     el.querySelectorAll('[data-tk]').forEach(x=>x.onchange=()=>{plan.ticks=plan.ticks||{};if(x.checked)plan.ticks[x.dataset.tk]=1;else delete plan.ticks[x.dataset.tk];savePlan();upd()});
     if(!shown&&!L.children.length)el.classList.add('open');
+    {const pb=el.querySelector('[data-payamt]');if(pb)pb.onclick=e=>{e.stopPropagation();const [i,k]=pb.dataset.payamt.split('|');openPayAmt(i,k,false)}}
     el.querySelector('.chq-h').onclick=()=>el.classList.toggle('open');L.appendChild(el)});shown+=n;chqMore.style.display=shown>=all.length?'none':''};
   add(8);chqMore.onclick=()=>add(8)}
 
@@ -1284,7 +1399,7 @@ function incOccCal(x,from,to){if(x.freq==='semi'||x.freq==='once')return incOcc(
   while(d>from&&n<600){d=x.freq==='weekly'?addDays(d,-7):x.freq==='biweekly'?addDays(d,-14):addMonths(d,-1,x.anchor);n++}
   const out=[];n=0;while(d<=to&&n<600){if(d>=from)out.push(d);n++;d=stepF(d,x.freq,x.anchor)}return out}
 function calData(from,to){const m={},add=(d,k,o)=>{const key=iso(d);(m[key]=m[key]||{inc:[],bills:[]})[k].push(o)};const t0=today();
-  income.forEach(x=>incOccCal(x,from,to).forEach(d=>add(d,'inc',{name:x.name,amount:x.amount})));
+  income.forEach(x=>incOccCal(x,from,to).forEach(d=>add(d,'inc',{name:x.name,amount:payAmt(x,d),est:payEst(x,d)})));
   bills.forEach(b=>billOcc(b,null,to).forEach(d=>{if(d>=from)add(d,'bills',{b,id:b.id,name:b.name,amount:b.amount,st:d<t0?'late':'due',cur:+d===+parse(b.due)})}));
   hist.filter(h=>h.type==='paid'&&h.due).forEach(h=>{const d=parse(h.due);if(d>=from&&d<=to)add(d,'bills',{b:bills.find(x=>x.id===h.billId)||{name:h.name},id:h.billId,name:h.name,amount:h.amount,st:'paid'})});
   return m}
@@ -1313,7 +1428,7 @@ function calDayHTML(k,D){const d=parse(k),e=D[k]||{inc:[],bills:[]},t0=today();
   const pill=!e.bills.length?'':e.bills.some(x=>x.st==='late')?`<span class="pill st-r">late</span>`:due>0?`<span class="pill st-${dd<=14?'y':'g'}">${dd===0?'today':'in '+dd+'d'} · ${money(Math.round(due*100)/100)}</span>`:`<span class="pill st-g">paid</span>`;
   let h=`<div class="pcard calday"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h4 style="margin:0">${title}</h4>${pill}</div>`;
   if(!e.inc.length&&!e.bills.length)return h+'<p class="muted">Nothing due and no payday this day.</p></div>';
-  e.inc.forEach(x=>{h+=`<div class="crow"><span class="ic" style="width:30px;height:30px;border-radius:9px">$</span><div class="nm"><b>${esc(x.name)}</b><small>Payday</small></div><div class="amt pos">+${money(x.amount)}</div></div>`});
+  e.inc.forEach(x=>{h+=`<div class="crow"><span class="ic" style="width:30px;height:30px;border-radius:9px">$</span><div class="nm"><b>${esc(x.name)}</b><small>Payday${x.est?' · estimated':''}</small></div><div class="amt pos">+${x.est?'~':''}${money(x.amount)}</div></div>`});
   let R=null;try{if(income.length&&e.bills.some(x=>x.st!=='paid'))R=runPlan()}catch(_){}
   e.bills.forEach(x=>{const b=x.b||{};let note=x.st==='paid'?'Paid':x.st==='late'?'Overdue · tap to pay':'';
     if(x.st==='due'&&R){const cs=R.ch.filter(c=>c.bills.some(q=>q.name===x.name&&+q.due===+d));note=cs.length?'Covered by '+cs.map(c=>esc(c.who)+' '+fmtD(c.date)).join(' + '):'From money already set aside'}
@@ -1397,6 +1512,130 @@ document.querySelectorAll('[data-ex]').forEach(b=>b.onclick=async()=>{const rows
   try{await navigator.clipboard.writeText(txt);exMsg.style.color='';exMsg.textContent=`Copied ${rows.length-1} rows. Paste into the first cell of a spreadsheet.`}
   catch(e){exTxt.value=txt;exTxt.style.display='block';exTxt.select();exMsg.style.color='';exMsg.textContent='Select everything in the box and copy it.'}});
 
+/* ===== Pay that changes each cheque ===== */
+function payActuals(x){return Object.keys(x.over||{}).sort().map(k=>x.over[k])}
+function rotPat(sh){if(sh.rot==='cust'){const on=Math.max(1,Math.min(28,parseInt(sh.on)||4)),off=Math.max(0,Math.min(28,parseInt(sh.off)||0));return sh.custN?'D'.repeat(on)+'-'.repeat(off)+'N'.repeat(on)+'-'.repeat(off):'D'.repeat(on)+'-'.repeat(off)}return(ROT[sh.rot]||ROT['4x4'])[1]}
+function shiftOn(x){const s=x.sh;return !!(x.vary&&x.est==='shift'&&s&&+s.rate>0&&+s.hrs>0&&s.anc)}
+function shiftCount(sh,a,b){const P=rotPat(sh),L=P.length,A=parse(sh.anc);let d=0,n=0;for(let t=new Date(a);t<=b;t=addDays(t,1)){const c=P[((Math.round((t-A)/864e5))%L+L)%L];if(c==='D')d++;else if(c==='N')n++}return{d,n}}
+/* stat holidays (BC list, plus extras some employers give) */
+function easter(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),n=h+l-7*m+114;return new Date(y,Math.floor(n/31)-1,n%31+1)}
+const nthMon=(y,m,n)=>{const d=new Date(y,m,1);return new Date(y,m,1+(8-d.getDay())%7+7*(n-1))};
+const STATY=new Map();
+function statList(y){if(STATY.has(y))return STATY.get(y);const E=easter(y),v=new Date(y,4,24);v.setDate(24-(v.getDay()+6)%7);
+  const r={ny:new Date(y,0,1),fam:nthMon(y,1,3),gf:addDays(E,-2),em:addDays(E,1),vic:v,can:new Date(y,6,1),bcd:nthMon(y,7,1),lab:nthMon(y,8,1),tr:new Date(y,8,30),thx:nthMon(y,9,2),rem:new Date(y,10,11),xmas:new Date(y,11,25),box:new Date(y,11,26)};STATY.set(y,r);return r}
+function statDays(a,b,keys){const out=[];for(let y=a.getFullYear();y<=b.getFullYear();y++){const L=statList(y);keys.forEach(k=>{const d=L[k];if(d&&d>=a&&d<=b)out.push([d,STATN[k]])})}return out}
+function altOn(x,d){const s=x.sh;if(!s.altD)return false;const st={weekly:7,biweekly:14}[x.freq]||15.2;return Math.round(Math.round((d-parse(s.altD))/864e5)/st)%2===0}
+function shiftInfo(x,d){const s=x.sh,L=PLEN[x.freq]||14,end=addDays(d,-(parseInt(s.lag)||0)),st=addDays(end,-(L-1)),c=shiftCount(s,st,end),R=+s.rate||0,Hh=+s.hrs||0,base=R*Hh;
+  let stat=0;const sn=[];if(s.stats&&s.stats.length){const Pt=rotPat(s),A=parse(s.anc),sh=s.statH!==''&&s.statH!=null&&+s.statH>=0?+s.statH:Hh;
+    statDays(st,end,s.stats).forEach(([sd,nm])=>{const w=Pt[((Math.round((sd-A)/864e5))%Pt.length+Pt.length)%Pt.length]!=='-';stat+=w?base*(s.statW!=null&&s.statW!==''?+s.statW:.5)+(s.statPW?R*sh:0):R*sh;sn.push(nm)})}
+  const alt=altOn(x,d);
+  return{...c,base:(c.d+c.n)*base,stat,stats:sn,alt,gross:c.d*(base+(+s.xd||0))+c.n*(base+(+s.xn||0))+(c.d+c.n?(+s.xc||0):0)+stat+(alt?(+s.altP||0):0)}}
+function shiftCuts(x,d){const s=x.sh;let c=0;if(+s.alt>0&&altOn(x,d))c+=+s.alt;
+  if(s.tax!=='bc'&&+s.jan>0&&d.getMonth()+1<(+s.janTo||7))c+=+s.jan;return c}
+/* Canadian payroll tax: federal + BC, CPP, CPP2, EI (per CRA payroll method, simplified) */
+const TAXFB={fed:{b:[58523,117045,181440,258482],r:[.14,.205,.26,.29,.33],bpa:16452,cea:1501},bc:{b:[50363,100728,115648,140430,190405,265545],r:[.0506,.077,.105,.1229,.147,.168,.205],bpa:13216}};
+const TAXP={2026:{...TAXFB,cpp:{ympe:74600,yampe:85000,rate:.0595,enh:.01},ei:{mie:68900,r:.0163}},2027:{...TAXFB,cpp:{ympe:76700,yampe:87400,rate:.0575,enh:.01},ei:{mie:70800,r:.0164}}};
+function taxP(y){const ks=Object.keys(TAXP).map(Number);return TAXP[y]||TAXP[y<Math.min(...ks)?Math.min(...ks):Math.max(...ks)]}
+function taxMax(y){const p=taxP(y);return{cpp:Math.round((p.cpp.ympe-3500)*p.cpp.rate*100)/100,cpp2:Math.round((p.cpp.yampe-p.cpp.ympe)*.04*100)/100,ei:Math.round(p.ei.mie*p.ei.r*100)/100}}
+function brk(v,b,r){let t=0,lo=0;for(let i=0;i<r.length;i++){const hi=i<b.length?b[i]:Infinity;if(v>lo)t+=(Math.min(v,hi)-lo)*r[i];lo=hi}return t}
+function payTax(T,cr,ded,P,y){const p=taxP(y),A=Math.max(0,(T-ded)*P);
+  const f=brk(A,p.fed.b,p.fed.r)-p.fed.r[0]*(p.fed.bpa+Math.min(p.fed.cea,A)+P*cr),b=brk(A,p.bc.b,p.bc.r)-p.bc.r[0]*(p.bc.bpa+P*cr);return(Math.max(0,f)+Math.max(0,b))/P}
+const PPY={weekly:52,biweekly:26,semi:24,monthly:12},SIMC=new Map();
+function taxSim(x){const key=(x.id||'draft')+'|'+iso(today())+'|'+JSON.stringify([x.sh,x.freq,x.date,x.anchor,x.d1,x.d2,x.ytd||null]);if(SIMC.has(key))return SIMC.get(key);if(SIMC.size>30)SIMC.clear();
+  const s=x.sh,P=PPY[x.freq]||26,t=today(),ks=Object.keys(x.over||{}).sort(),y0=Math.min(t.getFullYear(),ks.length?+ks[0].slice(0,4):9999);
+  const ds=incOccCal(x,new Date(y0,0,1),addDays(t,2200)),m=new Map();let yr=0,yc=0,yc2=0,ye=0,yp=0;const Y=x.ytd;
+  for(const d of ds){const y=d.getFullYear();if(y!==yr){yr=y;yc=yc2=ye=yp=0}const p=taxP(y),mx=taxMax(y),i=shiftInfo(x,d),g=i.gross;
+    if(Y&&Y.y===y&&iso(d)>=Y.d){if(Y.cpp)yc=mx.cpp;if(Y.cpp2)yc2=mx.cpp2;if(Y.ei)ye=mx.ei}
+    const pens=(+s.pens||0)/100*(i.base+i.stat);
+    const c=Math.max(0,Math.min(mx.cpp-yc,(g-3500/P)*p.cpp.rate)),c2=Math.max(0,Math.min(mx.cpp2-yc2,.04*Math.max(0,Math.min(yp+g,p.cpp.yampe)-Math.max(yp,p.cpp.ympe)))),e=Math.max(0,Math.min(mx.ei-ye,g*p.ei.r));
+    yc+=c;yc2+=c2;ye+=e;yp+=g;
+    const enh=c*p.cpp.enh/p.cpp.rate,tax=payTax(g-pens,c-enh+e,enh+c2,P,y);
+    m.set(iso(d),{gross:g,cpp:c+c2,ei:e,tax,net:g-pens-c-c2-e-tax-(i.alt?(+s.alt||0):0)})}
+  SIMC.set(key,m);return m}
+function taxAdj(x){const m=taxSim(x),r=Object.keys(x.over||{}).sort().slice(-8).filter(k=>m.has(k)).map(k=>x.over[k]-m.get(k).net);if(!r.length)return 0;r.sort((a,b)=>a-b);const h=r.length>>1,v=r.length%2?r[h]:(r[h-1]+r[h])/2;return Math.max(-600,Math.min(600,v))}
+function learnPct(x){if(x.sh.tax==='bc')return null;const r=[];Object.keys(x.over||{}).sort().slice(-8).forEach(k=>{const d=parse(k),i=shiftInfo(x,d);if(i.gross>0)r.push((x.over[k]+shiftCuts(x,d))/i.gross*100)});
+  if(r.length<2)return null;r.sort((a,b)=>a-b);const h=r.length>>1,m=r.length%2?r[h]:(r[h-1]+r[h])/2;return Math.max(30,Math.min(100,Math.round(m*10)/10))}
+function takePct(x){return +x.sh.pct>0?+x.sh.pct:(learnPct(x)||75)}
+function shiftEst(x,d){if(x.sh.tax==='bc'){const v=taxSim(x).get(iso(d));if(v)return Math.max(0,Math.round((v.net+taxAdj(x))*100)/100)}const i=shiftInfo(x,d);return Math.max(0,Math.round((i.gross*takePct(x)/100-shiftCuts(x,d))*100)/100)}
+function shiftTxt(i){const t=i.d+i.n;return t+' shift'+(t===1?'':'s')+(i.n?` (${i.d} day${i.d===1?'':'s'}, ${i.n} night${i.n===1?'':'s'})`:'')+(i.stats&&i.stats.length?' + '+i.stats.join(', '):'')}
+function usualPay(x){if(!x.vary)return x.amount;if(shiftOn(x)){const t=today(),ds=incOcc(x,t,addDays(t,400)).slice(0,8);if(ds.length)return Math.round(ds.reduce((a,d)=>a+shiftEst(x,d),0)/ds.length*100)/100}
+  const a=payActuals(x).slice(-8);return a.length?Math.round(a.reduce((p,q)=>p+q,0)/a.length*100)/100:x.amount}
+function payAmt(x,d){const k=iso(d);if(x.over&&x.over[k]!=null)return x.over[k];if(shiftOn(x))return shiftEst(x,d);return usualPay(x)}
+function payEst(x,d){return !!x.vary&&!(x.over&&x.over[iso(d)]!=null)}
+let PAYQ=null;
+function openPayAmt(id,k,fromPrompt){const x=income.find(i=>i.id===id);if(!x)return;PAYQ={id,k,fromPrompt};const d=parse(k),t=today();
+  payAmtTitle.textContent=fromPrompt==='stub'?'Your pay stub should be up':fromPrompt?'Payday!':'This cheque\'s amount';payStubBtn.style.display=x.vary?'':'none';
+  payQ.textContent=`How much ${d<=t?'did':'will'} ${x.name} ${d<=t?'come in at':'be'} on ${d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}?`;
+  payAmtIn.value=(x.over&&x.over[k]!=null)?x.over[k]:payAmt(x,d);payNote.textContent=shiftOn(x)?`Stacks guessed ${money(shiftEst(x,d))} from ${shiftTxt(shiftInfo(x,d))}. Only this cheque changes.`:x.vary?'Only this cheque changes. Future ones are estimated from your last 8.':'Only this cheque changes. The rest stay at '+money(x.amount)+'.';
+  payClear.style.display=(x.over&&x.over[k]!=null)?'':'none';payLater.textContent=fromPrompt?'Later':'Cancel';payAmtErr.textContent='';payAmtBg.classList.add('on');setTimeout(()=>{try{payAmtIn.focus();payAmtIn.select()}catch(_){}},60)}
+paySaveBtn.onclick=()=>{const a=parseFloat(payAmtIn.value);if(!(a>=0)){payAmtErr.textContent='Enter an amount';return}const x=income.find(i=>i.id===PAYQ.id);if(!x)return;
+  x.over=x.over||{};x.over[PAYQ.k]=Math.round(a*100)/100;if(PAYQ.ytd)x.ytd=PAYQ.ytd;const cut=iso(addDays(today(),-400));for(const k in x.over)if(k<cut)delete x.over[k];
+  saveInc();payAmtBg.classList.remove('on');render();if(!vPlan.hidden)renderPlan();toast(x.name+': '+money(x.over[PAYQ.k]));if(PAYQ.fromPrompt)setTimeout(paydayAsk,400)};
+payClear.onclick=()=>{const x=income.find(i=>i.id===PAYQ.id);if(x&&x.over){delete x.over[PAYQ.k];saveInc()}payAmtBg.classList.remove('on');render();if(!vPlan.hidden)renderPlan()};
+payLater.onclick=()=>{if(PAYQ&&PAYQ.fromPrompt)try{localStorage.setItem('billColumns.payLater',JSON.stringify({k:PAYQ.id+'|'+PAYQ.k,until:Date.now()+4*3600e3}))}catch(_){}payAmtBg.classList.remove('on')};
+function paydayAsk(){if(document.getElementById('intro')){setTimeout(paydayAsk,1200);return}if(document.querySelector('.sheet-bg.on'))return;const t=today();let snooze=null;try{snooze=JSON.parse(localStorage.getItem('billColumns.payLater')||'null')}catch(_){}
+  for(const x of income){if(!x.vary)continue;const ds=incOccCal(x,addDays(t,-14),t);for(const d of ds){const k=iso(d);if(x.over&&x.over[k]!=null)continue;
+    if(snooze&&snooze.k===x.id+'|'+k&&Date.now()<snooze.until)continue;openPayAmt(x.id,k,true);return}}
+  for(const x of income){if(!x.vary||!(+x.stubDays>0))continue;for(const d of incOcc(x,addDays(t,1),addDays(t,+x.stubDays))){const k=iso(d);if(x.over&&x.over[k]!=null)continue;
+    if(snooze&&snooze.k===x.id+'|'+k&&Date.now()<snooze.until)continue;openPayAmt(x.id,k,'stub');return}}}
+/* ===== Pay stub reader (on-device: PDF text or photo OCR) ===== */
+const PDFJS_URL='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',PDFJS_SRI='sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e',PDFJS_WK='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+let PDFP=null;
+function loadPdfjs(){if(window.pdfjsLib)return Promise.resolve();if(PDFP)return PDFP;
+  PDFP=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=window.__pdfUrl||PDFJS_URL;if(!window.__pdfUrl){sc.integrity=PDFJS_SRI;sc.crossOrigin='anonymous'}
+    sc.onload=()=>{pdfjsLib.GlobalWorkerOptions.workerSrc=window.__pdfWk||PDFJS_WK;res()};sc.onerror=()=>{PDFP=null;rej(new Error('load'))};document.head.appendChild(sc)});return PDFP}
+function stubCanvas(src){const W=src.naturalWidth||src.width,H=src.naturalHeight||src.height,k=Math.max(1,Math.min(2,3000/W,4500/H)),c=document.createElement('canvas');c.width=Math.round(W*k);c.height=Math.round(H*k);
+  const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(src,0,0,c.width,c.height);const im=g.getImageData(0,0,c.width,c.height),p=im.data;let sum=0;
+  for(let i=0;i<p.length;i+=4){const v=.299*p[i]+.587*p[i+1]+.114*p[i+2];p[i]=v;sum+=v}const inv=sum/(p.length/4)<128;
+  const hist=new Uint32Array(256);for(let i=0;i<p.length;i+=4){let v=p[i]|0;if(inv)v=255-v;p[i]=v;hist[v]++}const n=p.length/4;let lo=0,hi=255,a=0;while(lo<255&&(a+=hist[lo])<n*.01)lo++;a=0;while(hi>0&&(a+=hist[hi])<n*.01)hi--;const sp=Math.max(1,hi-lo);
+  for(let i=0;i<p.length;i+=4){const v=Math.max(0,Math.min(255,(p[i]-lo)*255/sp));p[i]=p[i+1]=p[i+2]=v}g.putImageData(im,0,0);return c}
+function fileImg(f){return new Promise((res,rej)=>{const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{res(im);setTimeout(()=>URL.revokeObjectURL(u),1000)};im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('img'))};im.src=u})}
+async function ocrCanvas(c,say){await loadTess();const w=await Tesseract.createWorker('eng',1,Object.assign({logger:m=>{if(m.status==='recognizing text')say('Reading your stub… '+Math.round(m.progress*100)+'%')}},window.__tessOpts||{}));
+  try{await w.setParameters({tessedit_pageseg_mode:'11',preserve_interword_spaces:'1'});const r=await w.recognize(c);return(r&&r.data&&r.data.text)||''}finally{try{await w.terminate()}catch(_){}}}
+async function stubText(f,say){const pdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name||'');
+  if(pdf){say(window.pdfjsLib?'Reading your stub…':'Reading your stub… The first PDF downloads the reader (about 1.5 MB).');await loadPdfjs();
+    const doc=await pdfjsLib.getDocument({data:new Uint8Array(await f.arrayBuffer()),isEvalSupported:false}).promise,out=[];
+    for(let n=1;n<=Math.min(doc.numPages,3);n++){const pg=await doc.getPage(n),tc=await pg.getTextContent(),rows=[];
+      tc.items.forEach(it=>{if(!it.str||!it.str.trim())return;const y=it.transform[5],xx=it.transform[4];let r=rows.find(r=>Math.abs(r.y-y)<3);if(!r){r={y,its:[]};rows.push(r)}r.its.push({x:xx,s:it.str.trim()})});
+      rows.sort((a,b)=>b.y-a.y).forEach(r=>out.push(r.its.sort((a,b)=>a.x-b.x).map(z=>z.s).join('  ')))}
+    const txt=out.join('\n');if(txt.replace(/\s/g,'').length>=40)return{txt,src:'pdf'};
+    const pg=await doc.getPage(1),vp=pg.getViewport({scale:2.5}),c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+    say(window.Tesseract?'Reading your stub…':'Reading your stub… The first photo downloads the reader (about 15 MB).');return{txt:await ocrCanvas(stubCanvas(c),say),src:'ocr'}}
+  say(window.Tesseract?'Reading your stub…':'Reading your stub… The first photo downloads the reader (about 15 MB), after that it\'s quick.');
+  return{txt:await ocrCanvas(stubCanvas(await fileImg(f)),say),src:'ocr'}}
+function stubAmts(l){return(l.replace(/(?<=\d)[OoQD]|[OoQD](?=\d)/g,'0').replace(/(?<=\d)\s+(?=[.,]\d)|(?<=\d[.,])\s+(?=\d)/g,'').match(/\d{1,3}(?:[,.]\d{3})+[.,]\d{2}(?!\d)|\d+[.,]\d{2}(?!\d)/g)||[]).map(v=>parseFloat(v.slice(0,-3).replace(/[.,]/g,'')+'.'+v.slice(-2)))}
+function stubPick(L,re){for(let i=0;i<L.length;i++){const m=L[i].match(re);if(!m)continue;let a=stubAmts(L[i].slice(m.index+m[0].length));if(!a.length&&i+1<L.length)a=stubAmts(L[i+1]);if(a.length)return a[0]}return null}
+const SMON='jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec';
+function stubDates(str){const out=[],re=new RegExp(`(\\d{4})[-/.](\\d{1,2})[-/.](\\d{1,2})|(\\d{1,2})[-/.](\\d{1,2})[-/.](\\d{4}|\\d{2})|(${SMON})[a-z]*\\.?\\s+(\\d{1,2}),?\\s+(\\d{4})|(\\d{1,2})\\s+(${SMON})[a-z]*\\.?,?\\s+(\\d{4})`,'ig');let m;
+  const add=(y,mo,da)=>{if(y<100)y+=2000;if(mo>=1&&mo<=12&&da>=1&&da<=31)out.push(new Date(y,mo-1,da))},mi=s=>SMON.split('|').indexOf(s.slice(0,3).toLowerCase())+1;
+  while((m=re.exec(str))){if(m[1])add(+m[1],+m[2],+m[3]);else if(m[4]){add(+m[6],+m[4],+m[5]);if(+m[4]<=12&&+m[5]<=12&&m[4]!==m[5])add(+m[6],+m[5],+m[4]);else if(+m[4]>12)add(+m[6],+m[5],+m[4])}
+    else if(m[7])add(+m[9],mi(m[7]),+m[8]);else if(m[10])add(+m[12],mi(m[11]),+m[10])}return out}
+function parseStub(txt,x){const L=txt.split(/\n/).map(l=>l.replace(/\s+/g,' ').trim()).filter(Boolean),t=today();
+  const net=stubPick(L,/net\s*pay|net\s*amount|take[\s-]*home|total\s*net|net\s*deposit|amount\s*deposited/i),gross=stubPick(L,/total\s*gross|gross\s*(pay|earnings|amount)/i),ded=stubPick(L,/total\s*deductions/i);
+  let cands=[];const md=str=>{const m=str.match(/(?:^|\D)(\d{1,2})\s*\/\s*(\d{1,2})(?!\d)/);if(!m)return[];const y=t.getFullYear(),o=[];for(const yy of[y-1,y,y+1]){o.push(new Date(yy,+m[1]-1,+m[2]));if(+m[2]<=12)o.push(new Date(yy,+m[2]-1,+m[1]))}return o};
+  for(let i=0;i<L.length;i++){const m=L[i].match(/(deposit|pay(ment)?|cheque|check|advice)\s*date|date\s*paid/i);if(!m)continue;const rest=L[i].slice(m.index+m[0].length),nx=i+1<L.length?L[i+1]:'';let c=stubDates(rest);if(!c.length)c=stubDates(nx);if(!c.length)c=md(rest);if(!c.length)c=md(nx);if(c.length){cands=c;break}}
+  const fixed=[];cands.forEach(d=>{fixed.push(d);if(Math.abs(d-t)>200*864e5)for(const y of[t.getFullYear()-1,t.getFullYear(),t.getFullYear()+1])fixed.push(new Date(y,d.getMonth(),d.getDate()))});
+  const exp=x&&x.date?incOccCal(x,addDays(t,-120),addDays(t,60)):[];const score=d=>exp.length?Math.min(...exp.map(e=>Math.abs(e-d)))/864e5:Math.abs(d-t)/864e5;
+  let date=null;fixed.forEach(d=>{if(score(d)<=(exp.length?1:90)&&(!date||score(d)<score(date)))date=d});if(!date&&fixed.length&&!exp.length)date=fixed[0];
+  let check=null,n2=net;const gd=gross!=null&&ded!=null&&ded<gross?Math.round((gross-ded)*100)/100:null;
+  if(gd!=null&&n2!=null){const df=Math.abs(gd-n2);if(df<0.015)check='ok';else if(df<=0.5){n2=gd;check='fixed'}else check='off'}else if(gd!=null&&n2==null){n2=gd;check='calc'}
+  if(n2!=null&&!(n2>0))n2=null;
+  const all=new Set(L.flatMap(stubAmts).map(v=>v.toFixed(2))),y=(date||t).getFullYear(),mx=taxMax(y),maxed={cpp:all.has(mx.cpp.toFixed(2)),cpp2:all.has(mx.cpp2.toFixed(2)),ei:all.has(mx.ei.toFixed(2))};
+  return{net:n2,date,gross,ded,check,y,maxed}}
+function stubMsg(r,src){if(r.net==null)return'Couldn\'t find the take-home on that stub. Type it in.';let m=`Read ${money(r.net)} take-home${r.date?' for '+r.date.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}):''}.`;
+  if(r.check==='ok')m+=' Gross minus deductions matches ✓';else if(r.check==='fixed')m+=' Fixed a blurry digit using gross minus deductions ✓';else if(r.check==='calc')m+=' Worked out from gross minus deductions.';
+  if(!r.date)m+=' Couldn\'t read the date, so check it.';
+  const mx=[r.maxed.cpp&&'CPP',r.maxed.cpp2&&'CPP2',r.maxed.ei&&'EI'].filter(Boolean);if(mx.length)m+=` ${mx.join(', ').replace(/, (?=[^,]*$)/,' and ')} maxed for ${r.y}.`;
+  return m+(src==='ocr'&&!(r.check==='ok'||r.check==='fixed')?' Check it before saving.':'')}
+function stubYtd(r){return(r.maxed.cpp||r.maxed.ei||r.maxed.cpp2)?{y:r.y,d:iso(r.date||today()),cpp:r.maxed.cpp?1:0,cpp2:r.maxed.cpp2?1:0,ei:r.maxed.ei?1:0}:null}
+async function runStub(f,say,x){try{const {txt,src}=await stubText(f,say);const r=parseStub(txt,x);r.src=src;return r}
+  catch(e){say(navigator.onLine===false?'Reading a stub the first time needs internet to download the reader.':'Couldn\'t read that file. Type the amount in instead.');return null}}
+stubBtn.onclick=()=>stubIn.click();payStubBtn.onclick=()=>payStubIn.click();
+stubIn.onchange=async()=>{const f=stubIn.files&&stubIn.files[0];if(!f)return;const say=m=>stubStat.textContent=m;const r=await runStub(f,say,draftInc());try{stubIn.value=''}catch(_){}if(!r)return;
+  if(r.net!=null){pastA.value=r.net.toFixed(2);if(r.date){pastD.value=iso(r.date);pastD.dataset.touched=1}}const y=stubYtd(r);if(y)edYtd=y;say(stubMsg(r,r.src)+(r.net!=null?' Tap Add this cheque.':''));syncVary()};
+payStubIn.onchange=async()=>{const f=payStubIn.files&&payStubIn.files[0];if(!f||!PAYQ)return;const x=income.find(i=>i.id===PAYQ.id);const say=m=>payNote.textContent=m;const r=await runStub(f,say,x);try{payStubIn.value=''}catch(_){}if(!r)return;
+  if(r.net!=null)payAmtIn.value=r.net.toFixed(2);if(r.date&&iso(r.date)!==PAYQ.k){PAYQ.k=iso(r.date);payQ.textContent=`How much ${r.date<=today()?'did':'will'} ${x.name} ${r.date<=today()?'come in at':'be'} on ${r.date.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}?`}
+  PAYQ.ytd=stubYtd(r);say(stubMsg(r,r.src))};
 /* ===== Insights ===== */
 let insP='month',insD=null;
 const INS_SPEND=['#FFC94A','#B06BF0','#5EE3A1','#FF8CC6','#3CD3C4','#9AD0FF'],INS_CAT={debt:['Debt','#E5484D'],util:['Utilities','#2F8EEA'],living:['Living bills','#F07F2E']};
@@ -1408,7 +1647,7 @@ function insOut(from,to){const cats={},rows=[];let tot=0;const add=(k,lab,col,am
     add('s_'+(i<0?'other':l.item),nm,i<0?'#8A97AD':INS_SPEND[i%INS_SPEND.length],l.amount,[l.date,'Spending',l.note||nm,nm,l.amount])});
   return{tot,cats:Object.values(cats).sort((a,b)=>b.amt-a.amt),rows}}
 function insIn(from,to,start){const t0=today();let tot=0;const rows=[];if(!start)return{tot,rows};
-  income.forEach(x=>incOccCal(x,from,to).forEach(d=>{if(d>=start&&d<=t0){tot+=x.amount;rows.push([iso(d),'Income',x.name,'Income',x.amount])}}));return{tot,rows}}
+  income.forEach(x=>incOccCal(x,from,to).forEach(d=>{if(d>=start&&d<=t0){const a=payAmt(x,d);tot+=a;rows.push([iso(d),'Income',x.name,'Income',a])}}));return{tot,rows}}
 function renderIns(){if(vIns.hidden)return;const t0=today();if(!insD)insD=new Date(t0.getFullYear(),t0.getMonth(),1);const start=insStart();
   document.querySelectorAll('[data-ip]').forEach(b=>{const on=b.dataset.ip===insP;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)});
   const [from,to]=insRange(insP,insD);const cur=t0>=from&&t0<=to;const lab=insP==='year'?String(from.getFullYear()):from.toLocaleDateString(undefined,{month:'long',year:'numeric'});
@@ -1669,6 +1908,7 @@ loadCfg();syncSettings();setRange(cfg.range);
 load();loadInc();loadPlan();loadHist();render();show('bills');
 syLoad();if(!bills.length&&!income.length&&!cfg.setupDone&&!SY.hid)wizOpen();
 syStart();
+setTimeout(paydayAsk,2600);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(paydayAsk,800)});
 histBtn.onclick=()=>{renderHist();histBg.classList.add('on')};histClose.onclick=()=>histBg.classList.remove('on');
 window.addEventListener('resize',()=>renderCols());
 window.addEventListener('orientationchange',()=>setTimeout(renderCols,200));
