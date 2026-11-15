@@ -399,6 +399,11 @@ input,select{border-radius:12px}
 .catgrid button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px}
 .catgrid button.on{border-color:var(--lime)}
 .catgrid .bic{width:32px;height:32px}
+
+html[data-theme=indigo2]{color-scheme:dark;--bg:#333766;--card:#414680;--text:#F6F6FF;--muted:#CDCFF2;--line:#5A5FA0;--strong:#F6F6FF;
+--g-bg:#2A5A44;--g-tx:#B9F3CC;--y-bg:#6A5320;--y-tx:#FFE2A3;--r-bg:#6E2B3C;--r-tx:#FFC6C6;--red:#FF8080;--accent:#B4E97A;
+--lime:#B4E97A;--peri:#B3B4FF;--chip:#3A3E74;--ok:#73EDB0;--navbg:#4E5291;--pri-bg:#5A5DD8;--pri-tx:#fff;--plus-bg:#B4E97A;--plus-tx:#16173F;--seg-bg:#5A5DD8;--seg-tx:#fff;--tab-on:#5A5DD8;--band:#333766}
+body::before{background:var(--band,#121331)}
 </style>
 </head>
 <body>
@@ -490,8 +495,8 @@ window.__introSkip=finish})();</script>
     <div class="card" style="padding:12px" id="syncCard"></div>
     <div class="sec">App appearance</div>
     <div class="card">
-      <div class="set"><div class="nm"><b>Theme</b><small>Indigo, light, medium grey, or dark</small></div>
-        <select id="sTheme"><option value="indigo">Indigo</option><option value="light">Light</option><option value="medium">Medium</option><option value="dark">Dark</option></select></div>
+      <div class="set"><div class="nm"><b>Theme</b><small>Indigo, indigo light, light, medium grey, or dark</small></div>
+        <select id="sTheme"><option value="indigo">Indigo</option><option value="indigo2">Indigo light</option><option value="light">Light</option><option value="medium">Medium</option><option value="dark">Dark</option></select></div>
       <div class="set"><div class="nm"><b>Play intro when the app opens</b><small>The 2-second piggy intro. Tap it to skip anytime.</small></div><label class="tg"><input type="checkbox" id="sIntro"><span></span></label></div>
     </div>
     <div class="sec">Bills settings</div>
@@ -721,9 +726,9 @@ const KEY='billColumns.v2',CKEY='billColumns.cfg2',IKEY='billColumns.income2';
 let income=[];
 function saveInc(){try{localStorage.setItem(IKEY,JSON.stringify(income))}catch(e){}if(window.syncQueue)syncQueue()}
 function loadInc(){try{const s=localStorage.getItem(IKEY);if(s)income=JSON.parse(s)}catch(e){}}
-let cfg={intro:true,remind:3,warn:14,warnBi:14,range:30,layout:'vertical',landWide:true,theme:'indigo',look2:1,lArrange:false,lSort:'due',bArrange:true,bSort:'due',budgetOrder:[]};
+let cfg={intro:true,remind:3,warn:14,warnBi:14,range:30,layout:'vertical',landWide:true,theme:'indigo',lArrange:false,lSort:'due',bArrange:true,bSort:'due',budgetOrder:[]};
 function saveCfg(){try{localStorage.setItem(CKEY,JSON.stringify(cfg))}catch(e){}}
-function loadCfg(){try{const s=localStorage.getItem(CKEY);if(s)cfg={...cfg,...JSON.parse(s)}}catch(e){}if(!cfg.look2){cfg.theme='indigo';cfg.look2=1;saveCfg()}}
+function loadCfg(){let st=null;try{const s=localStorage.getItem(CKEY);if(s){st=JSON.parse(s);cfg={...cfg,...st}}}catch(e){}if(!st||!st.look3){cfg.theme='indigo';cfg.look3=1;if(st)saveCfg()}}
 let bills=[],range=30,simDays=0,editId=null,selColor=COLORS[0],payId=null;
 
 const pad=n=>String(n).padStart(2,'0');
