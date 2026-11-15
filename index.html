@@ -547,6 +547,16 @@ window.__introSkip=finish})();</script>
       <div class="set"><div class="nm"><b>Turn yellow</b><small>Days before due, monthly and one-time bills</small></div><select id="sWarn"></select></div>
       <div class="set"><div class="nm"><b>Turn yellow, bi-weekly</b><small>At 14, bi-weekly labels stay yellow the whole cycle</small></div><select id="sWarnBi"></select></div>
     </div>
+    <!--CUSTOM:start (Alex and Ashlee only, stripped from the public build) -->
+    <div class="sec">Just for us</div>
+    <div class="card" style="padding:12px">
+      <div class="nm"><b>Load a pay setup</b><small style="color:var(--muted)">Paste the setup code from Claude. It fills in shifts, tax, stat holidays and real cheques for one pay.</small></div>
+      <label class="f" for="cuInc">Which pay</label><select id="cuInc"></select>
+      <label class="f" for="cuCode">Setup code</label><textarea id="cuCode" rows="3" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="STACKS1:…"></textarea>
+      <div class="err" id="cuErr"></div>
+      <div class="bar"><button class="btn pri" id="cuGo">Load it</button></div>
+    </div>
+    <!--CUSTOM:end-->
     <div class="sec">Test mode</div>
     <div class="card">
       <div class="set" style="display:block"><div class="nm"><b>Jump ahead <span id="simOut">0</span> days</b><small style="color:var(--muted)">Pretend it's a later date to watch columns drop. Resets when the app reopens.</small></div>
@@ -1910,6 +1920,18 @@ syLoad();if(!bills.length&&!income.length&&!cfg.setupDone&&!SY.hid)wizOpen();
 syStart();
 setTimeout(paydayAsk,2600);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(paydayAsk,800)});
 histBtn.onclick=()=>{renderHist();histBg.classList.add('on')};histClose.onclick=()=>histBg.classList.remove('on');
+/*CUSTOM:start Alex and Ashlee only: load a pay setup code (stripped from the public build) */
+function cuFill(){const v=cuInc.value;cuInc.innerHTML=income.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');const a=income.find(x=>x.id===v)||income.find(x=>/alex/i.test(x.name));if(a)cuInc.value=a.id}
+gearBtn.addEventListener('click',cuFill);
+cuCode.oninput=()=>cuErr.textContent='';
+cuGo.onclick=()=>{cuErr.textContent='';const m=cuCode.value.replace(/\s+/g,'').match(/^STACKS1:([A-Za-z0-9_-]+)$/);let c=null;
+  if(m)try{c=JSON.parse(atob(m[1].replace(/-/g,'+').replace(/_/g,'/')))}catch(e){}
+  if(!c||!c.sh){cuErr.textContent='That code doesn\'t look right. Copy the whole thing and try again.';return}
+  const x=income.find(i=>i.id===cuInc.value);if(!x){cuErr.textContent='Add the pay first, under Plan › Your numbers.';return}
+  Object.assign(x,{freq:c.freq||x.freq,date:c.date||x.date,anchor:c.date?parse(c.date).getDate():x.anchor,vary:true,est:'shift',sh:c.sh});
+  if(c.stubDays!=null)x.stubDays=c.stubDays;if(c.ytd)x.ytd=c.ytd;x.over={...(x.over||{}),...(c.over||{})};x.amount=usualPay(x);
+  saveInc();render();cuCode.value='';const n=incNext(x);toast(`${x.name} is set up. Next cheque ${payEst(x,n)?'~':''}${money(payAmt(x,n))}`)};
+/*CUSTOM:end*/
 window.addEventListener('resize',()=>renderCols());
 window.addEventListener('orientationchange',()=>setTimeout(renderCols,200));
 </script>
