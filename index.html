@@ -207,6 +207,13 @@ textarea{width:100%;min-height:90px;font:12px ui-monospace,monospace;padding:10p
 .lab b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
 .sheet-bg.on{display:flex}
+.sxw{position:sticky;top:-6px;height:0;z-index:3}
+.sheetx{position:absolute;right:-4px;top:-6px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--chip);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.sheetx svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+#editBg h3,#payBg h3{padding-right:44px}
+.totop{position:fixed;right:max(23px,calc(50% - 271px));bottom:calc(92px + env(safe-area-inset-bottom));width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--text);opacity:.94;box-shadow:0 4px 14px rgba(0,0,0,.35);z-index:6;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.totop[hidden]{display:none}
+.totop svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .sheet{background:var(--card);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px 24px;max-height:92vh;overflow:auto}
 .sheet h3{margin:0 0 12px;font-size:18px}
 label.f{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
@@ -598,6 +605,7 @@ window.__introSkip=finish})();</script>
   <button type="button" class="btn addchq" id="payStubBtn">Read my pay stub (PDF or photo)</button><input type="file" id="payStubIn" accept="application/pdf,image/*" hidden>
   <div class="hint" id="payNote"></div><div class="err" id="payAmtErr"></div>
   <div class="bar"><button class="btn" id="payLater">Later</button><button class="btn" id="payClear">Use estimate</button><button class="btn pri" id="paySaveBtn">Save</button></div></div></div>
+<button type="button" class="totop" id="toTop" aria-label="Back to top" hidden><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
 <nav class="bot"><div class="pillnav">
   <button id="nBills" class="on" aria-label="Bills"><svg viewBox="0 0 24 24"><path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17l-3-2-2.5 2-2.5-2-2.5 2L6 19z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>Bills</button>
   <button id="nBudget" aria-label="Budget"><svg viewBox="0 0 24 24"><path d="M3 21h18"/><rect x="5" y="12" width="3" height="9"/><rect x="10.5" y="7" width="3" height="14"/><rect x="16" y="3" width="3" height="18"/></svg>Budget</button>
@@ -605,7 +613,7 @@ window.__introSkip=finish})();</script>
   <button id="nIns" aria-label="Insights"><svg viewBox="0 0 24 24"><path d="M10 3.2a9 9 0 1 0 10.8 10.8a1 1 0 0 0 -1 -1h-6.8a2 2 0 0 1 -2 -2v-7a.9 .9 0 0 0 -1 -.8"/><path d="M15 3.5a9 9 0 0 1 5.5 5.5h-4.5a1 1 0 0 1 -1 -1v-4.5"/></svg>Insights</button>
 </div><button class="plus" id="nAdd" aria-label="Add spending"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></nav>
 
-<div class="sheet-bg" id="editBg"><div class="sheet">
+<div class="sheet-bg" id="editBg"><div class="sheet"><div class="sxw"><button type="button" class="sheetx" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <h3 id="edTitle">Add bill</h3>
   <label class="f">Name</label><input id="fName" placeholder="Hydro">
   <label class="f">Category</label>
@@ -792,7 +800,7 @@ window.__introSkip=finish})();</script>
   <div class="bar"><button class="btn" id="icClose">Close</button></div>
 </div></div>
 
-<div class="sheet-bg" id="payBg"><div class="sheet">
+<div class="sheet-bg" id="payBg"><div class="sheet"><div class="sxw"><button type="button" class="sheetx" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <h3 id="payTitle"></h3><div id="payInfo" style="color:var(--muted);font-size:14px"></div>
   <label class="f">Amount paid ($)</label><input id="payBillAmt" type="number" inputmode="decimal" step="0.01" min="0">
   <div class="err" id="payErr"></div>
@@ -1071,7 +1079,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 
 function show(v){const m={bills:['vBills','nBills'],budget:['vCols','nBudget'],plan:['vPlan','nPlan'],set:['vSet','gearBtn'],ins:['vIns','nIns']};
   for(const k in m){document.getElementById(m[k][0]).hidden=k!==v;document.getElementById(m[k][1]).classList.toggle('on',k===v)}
-  window.scrollTo(0,0);if(v==='budget'){renderSafe();setBudView(cfg.budView||'cols')}if(v==='bills')renderList();if(v==='ins')renderIns();if(v==='plan'){if(!planOut.hidden)renderPlan()}}
+  window.scrollTo(0,0);syncTop();if(v==='budget'){renderSafe();setBudView(cfg.budView||'cols')}if(v==='bills')renderList();if(v==='ins')renderIns();if(v==='plan'){if(!planOut.hidden)renderPlan()}}
 nPlan.onclick=()=>show('plan');
 function planTab(t){document.querySelectorAll('#planTabs button').forEach(b=>b.classList.toggle('on',b.dataset.pt===t));planOut.hidden=t!=='res';planInputs.hidden=t!=='inp';if(t==='res')renderPlan();window.scrollTo(0,0)}
 document.querySelectorAll('#planTabs button').forEach(b=>b.onclick=()=>planTab(b.dataset.pt));
@@ -1155,6 +1163,9 @@ function openPay(id){payId=id;const b=bills.find(x=>x.id===id);payTitle.textCont
   payBillAmt.value=b.amount;payErr.textContent='';payBg.classList.add('on')}
 function nextDue(b){return stepF(parse(b.due),b.freq,b.anchor)}
 payCancel.onclick=()=>payBg.classList.remove('on');
+document.querySelectorAll('.sheetx').forEach(b=>b.onclick=()=>b.closest('.sheet-bg').classList.remove('on'));
+function syncTop(){toTop.hidden=vBills.hidden||window.scrollY<500}
+window.addEventListener('scroll',syncTop,{passive:true});toTop.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
 payEdit.onclick=()=>{payBg.classList.remove('on');openEdit(payId)};
 const HKEY='billColumns.hist2';let hist=[];
 function saveHist(){try{localStorage.setItem(HKEY,JSON.stringify(hist.slice(-600)))}catch(e){}if(window.syncQueue)syncQueue()}
