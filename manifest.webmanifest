@@ -1,6 +1,6 @@
 {
- "name": "Stacks AI",
- "short_name": "Stacks AI",
+ "name": "Stacks",
+ "short_name": "Stacks",
  "start_url": "./",
  "scope": "./",
  "display": "standalone",
