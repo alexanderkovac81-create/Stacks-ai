@@ -412,7 +412,7 @@ body::before{background:var(--band,#121331)}
 try{c=JSON.parse(localStorage.getItem('billColumns.cfg2')||'{}')}catch(e){}
 var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 function finish(){if(done)return;done=true;el.classList.add('out');setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);if(url)URL.revokeObjectURL(url)},380)}
-if(c.intro===false||reduce||!window.fetch){el.parentNode.removeChild(el);return}
+if(reduce||!window.fetch){el.parentNode.removeChild(el);return}
 v.style.objectFit=(innerWidth/innerHeight<0.75)?'cover':'contain';
 el.addEventListener('click',finish);v.addEventListener('ended',finish);v.addEventListener('error',finish);
 var startT=setTimeout(finish,2500);setTimeout(finish,6000);
@@ -495,9 +495,8 @@ window.__introSkip=finish})();</script>
     <div class="card" style="padding:12px" id="syncCard"></div>
     <div class="sec">App appearance</div>
     <div class="card">
-      <div class="set"><div class="nm"><b>Theme</b><small>Indigo, indigo light, light, medium grey, or dark</small></div>
-        <select id="sTheme"><option value="indigo">Indigo</option><option value="indigo2">Indigo light</option><option value="light">Light</option><option value="medium">Medium</option><option value="dark">Dark</option></select></div>
-      <div class="set"><div class="nm"><b>Play intro when the app opens</b><small>The 2-second piggy intro. Tap it to skip anytime.</small></div><label class="tg"><input type="checkbox" id="sIntro"><span></span></label></div>
+      <div class="set"><div class="nm"><b>Theme</b><small>Indigo, or the lighter indigo</small></div>
+        <select id="sTheme"><option value="indigo">Indigo</option><option value="indigo2">Indigo light</option></select></div>
     </div>
     <div class="sec">Bills settings</div>
     <div class="card">
@@ -728,7 +727,7 @@ function saveInc(){try{localStorage.setItem(IKEY,JSON.stringify(income))}catch(e
 function loadInc(){try{const s=localStorage.getItem(IKEY);if(s)income=JSON.parse(s)}catch(e){}}
 let cfg={intro:true,remind:3,warn:14,warnBi:14,range:30,layout:'vertical',landWide:true,theme:'indigo',lArrange:false,lSort:'due',bArrange:true,bSort:'due',budgetOrder:[]};
 function saveCfg(){try{localStorage.setItem(CKEY,JSON.stringify(cfg))}catch(e){}}
-function loadCfg(){let st=null;try{const s=localStorage.getItem(CKEY);if(s){st=JSON.parse(s);cfg={...cfg,...st}}}catch(e){}if(!st||!st.look3){cfg.theme='indigo';cfg.look3=1;if(st)saveCfg()}}
+function loadCfg(){let st=null;try{const s=localStorage.getItem(CKEY);if(s){st=JSON.parse(s);cfg={...cfg,...st}}}catch(e){}if(!st||!st.look3){cfg.theme='indigo';cfg.look3=1;if(st)saveCfg()}if(cfg.theme!=='indigo'&&cfg.theme!=='indigo2')cfg.theme='indigo'}
 let bills=[],range=30,simDays=0,editId=null,selColor=COLORS[0],payId=null;
 
 const pad=n=>String(n).padStart(2,'0');
@@ -956,14 +955,14 @@ sWarnBi.onchange=()=>{cfg.warnBi=+sWarnBi.value;saveCfg();render()};
 sRemind.onchange=()=>{cfg.remind=+sRemind.value;saveCfg();renderAlert()};
 sRange.onchange=()=>{cfg.range=+sRange.value;saveCfg();setRange(cfg.range)};
 sLayout.onchange=()=>{cfg.layout=sLayout.value;saveCfg();syncSettings();renderCols()};
-function syncSettings(){sIntro.checked=cfg.intro!==false;sRemind.value=cfg.remind;sTheme.value=cfg.theme;document.documentElement.dataset.theme=cfg.theme;
+function syncSettings(){sRemind.value=cfg.remind;sTheme.value=cfg.theme;document.documentElement.dataset.theme=cfg.theme;
   sLArr.checked=cfg.lArrange;sLSort.value=cfg.lSort;rLSort.style.display=cfg.lArrange?'':'none';
   sBArr.checked=cfg.bArrange;sBSort.value=cfg.bSort;rBSort.style.display=cfg.bArrange?'':'none';
   firstWhere.textContent=cfg.layout==='horizontal'?'on top':'on the left';
   sLayout.value=cfg.layout;sLand.checked=cfg.landWide;document.body.classList.toggle('landwide',cfg.landWide);
   sWarn.value=cfg.warn;sWarnBi.value=cfg.warnBi;sRange.value=cfg.range}
 sTheme.onchange=()=>{cfg.theme=sTheme.value;saveCfg();syncSettings()};
-sIntro.onchange=()=>{cfg.intro=sIntro.checked;saveCfg()};
+
 sLArr.onchange=()=>{if(!sLArr.checked&&cfg.lArrange){bills=CATS.flatMap(([k])=>listOrder().filter(b=>catOf(b)===k));save()}cfg.lArrange=sLArr.checked;saveCfg();syncSettings();renderList()};
 sLSort.onchange=()=>{cfg.lSort=sLSort.value;saveCfg();renderList()};
 sBArr.onchange=()=>{if(!sBArr.checked&&cfg.bArrange)cfg.budgetOrder=colOrder().map(b=>b.id);cfg.bArrange=sBArr.checked;saveCfg();syncSettings();renderCols()};
