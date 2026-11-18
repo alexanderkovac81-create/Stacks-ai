@@ -213,6 +213,7 @@ textarea{width:100%;min-height:90px;font:12px ui-monospace,monospace;padding:10p
 #editBg h3,#payBg h3{padding-right:44px}
 .totop{position:fixed;right:max(23px,calc(50% - 271px));bottom:calc(92px + env(safe-area-inset-bottom));width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--text);opacity:.94;box-shadow:0 4px 14px rgba(0,0,0,.35);z-index:6;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .totop[hidden]{display:none}
+/*CUSTOM:start*/.cucard .cusp{margin-top:8px;font-size:13px}.cucard .cusl{display:flex;justify-content:space-between;gap:8px}.cucard .pbar{margin:4px 0 0;height:6px}.cucard .lnkbtn{margin-top:10px}/*CUSTOM:end*/
 .totop svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .sheet{background:var(--card);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px 24px;max-height:92vh;overflow:auto}
 .sheet h3{margin:0 0 12px;font-size:18px}
@@ -493,7 +494,7 @@ window.__introSkip=finish})();</script>
     <div class="sum"><span>Coming in next 30 days</span><b id="inc30">$0</b></div>
     <div class="sec">Plan settings</div>
     <div class="card">
-      <div class="set"><div class="nm"><b>Money in the bank now</b><small>What's in your account today. Update it now and then.</small></div><input id="pBank" type="number" inputmode="decimal" step="1" placeholder="0"></div>
+      <div class="set"><div class="nm"><b>Money in the bank now</b><small id="pBankNote">What's in your account today. After that, Stacks keeps it up to date.</small></div><input id="pBank" type="number" inputmode="decimal" step="0.01" placeholder="0"></div>
       <div class="set"><div class="nm"><b>Paying bills</b><small>Split each bill into partial payments from the cheques before it's due, or pay it in full from the cheque just before it's due</small></div>
         <select id="pMode"><option value="split">Partial payments</option><option value="full">Pay in full, on time</option></select></div>
       <div class="set"><div class="nm"><b>Keep a cushion of</b><small>The plan never counts on going below this</small></div><input id="pCush" type="number" inputmode="decimal" step="1" placeholder="200"></div>
@@ -562,6 +563,10 @@ window.__introSkip=finish})();</script>
       <label class="f" for="cuCode">Setup code</label><textarea id="cuCode" rows="3" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="STACKS1:…"></textarea>
       <div class="err" id="cuErr"></div>
       <div class="bar"><button class="btn pri" id="cuGo">Load it</button></div>
+    </div>
+    <div class="card" style="padding:12px;margin-top:10px">
+      <div class="nm"><b>"Other" spending comes out of</b><small style="color:var(--muted)">Other purchases count against this spending money, and show as one line in Plan.</small></div>
+      <select id="cuOth" aria-label="Other spending comes out of" style="margin-top:8px"></select>
     </div>
     <!--CUSTOM:end-->
     <div class="sec">Test mode</div>
@@ -777,6 +782,8 @@ window.__introSkip=finish})();</script>
   <h3>Money in the bank now</h3>
   <p class="muted" style="font-size:14px;margin:0">Your chequing and spending accounts as of right now. Leave out savings that belong to a goal.</p>
   <label class="f">Balance ($)</label><input id="bkIn" type="number" inputmode="decimal" step="0.01">
+  <div class="set" id="bkIncRow" style="border:0;padding:10px 0 0"><div class="nm"><b>This includes today's pay</b><small>Turn off if it hasn't landed yet</small></div><label class="tg"><input type="checkbox" id="bkInc" checked><span></span></label></div>
+  <div class="hint" id="bkNote"></div>
   <div class="err" id="bankErr"></div>
   <div class="bar"><button class="btn" id="bankCancel">Cancel</button><button class="btn pri" id="bankSave">Save</button></div>
 </div></div>
@@ -1217,13 +1224,13 @@ function billGoal(b){const left=payLimit(b);const bal=b.balance>0?b.balance:(isF
 function allGoals(){const list=[...plan.goals,...bills.filter(b=>catOf(b)==='debt'&&b.goal).map(billGoal).filter(g=>g.balance>0)];
   const ord=plan.order||[];const pos=g=>{const i=ord.indexOf(g.id);return i<0?1e6+list.indexOf(g):i};return list.sort((a,b)=>pos(a)-pos(b))}
 
-function buildCheques(t0,H){const spd=spendPerDay();
-  const ch=income.flatMap(x=>incOcc(x,t0,H).map(d=>({date:d,who:x.name,iid:x.id,amount:payAmt(x,d),est:payEst(x,d),shi:shiftOn(x)?shiftInfo(x,d):null}))).sort((a,b)=>a.date-b.date);
+function buildCheques(t0,H){const spd=spendPerDay(),f0=skipToday()?addDays(t0,1):t0;
+  const ch=income.flatMap(x=>incOcc(x,f0,H).map(d=>({date:d,who:x.name,iid:x.id,amount:payAmt(x,d),est:payEst(x,d),shi:shiftOn(x)?shiftInfo(x,d):null}))).sort((a,b)=>a.date-b.date);
   if(WI&&WI.inc){const cpy=Math.max(1,ch.filter(c=>c.date<addDays(t0,365)).length);ch.forEach(c=>c.amount+=WI.inc*12/cpy)}
   ch.forEach((c,i)=>{c.days=i<ch.length-1?Math.max(0,Math.round((ch[i+1].date-c.date)/864e5)):7;c.spend=spd*c.days;c.bills=[]});return ch}
 function buildOccs(t0,H,cut){const occs=[];const gb=new Set(AG.filter(g=>g.fromBill).map(g=>g.fromBill));
-  bills.filter(b=>!gb.has(b.id)).forEach(b=>{let prev=addDays(t0,-1);const rec=!(b.mode==='limited'&&b.remaining<=1);billOcc(b,null,H).forEach(d=>{occs.push({acct:acctOf(b),name:b.name,amount:b.amount,date:d,prev,pri:b.pri||'must',freq:b.freq,first:rec&&d>=t0&&prev<t0});if(d>=t0)prev=d})});
-  AG.filter(g=>g.type==='debt').forEach(g=>{let prev=addDays(t0,-1);const c=cut[g.id]||H;debtDates(g,H).forEach(d=>{if(d<=c){occs.push({acct:g.fromBill?acctOf(bills.find(x=>x.id===g.fromBill)||{}):accts()[0].id,name:g.fromBill?g.name:g.name+' minimum',amount:g.min,date:d,prev,pri:'must',debt:g.id,freq:g.freq||'monthly',first:prev<t0});prev=d}})});
+  bills.filter(b=>!gb.has(b.id)).forEach(b=>{let prev=addDays(t0,-1);const rec=!(b.mode==='limited'&&b.remaining<=1);billOcc(b,null,H).forEach(d=>{occs.push({acct:acctOf(b),name:b.name,amount:b.amount,date:d,prev,pri:b.pri||'must',freq:b.freq,first:rec&&d>=t0&&prev<t0,bid:b.id});if(d>=t0)prev=d})});
+  AG.filter(g=>g.type==='debt').forEach(g=>{let prev=addDays(t0,-1);const c=cut[g.id]||H;debtDates(g,H).forEach(d=>{if(d<=c){occs.push({acct:g.fromBill?acctOf(bills.find(x=>x.id===g.fromBill)||{}):accts()[0].id,name:g.fromBill?g.name:g.name+' minimum',amount:g.min,date:d,prev,pri:'must',debt:g.id,freq:g.freq||'monthly',first:prev<t0,bid:g.fromBill||null});prev=d}})});
   if(WI&&WI.buy>0&&WI.date)occs.push({name:'What-if purchase',amount:WI.buy,date:parse(WI.date),prev:addDays(t0,-1),pri:'must'});
   return occs}
 function lastIdx(ch,d){let lo=0,hi=ch.length-1,r=-1;while(lo<=hi){const m=(lo+hi)>>1;if(ch[m].date<=d){r=m;lo=m+1}else hi=m-1}return r}
@@ -1232,7 +1239,7 @@ function fund(ch,occs,t0,mode){let bank=0;
     if(mode==='spread'){const j=lastIdx(ch,o.date);for(let i=j;i>=0&&ch[i].date>o.prev;i--)idx.push(i);
       if(o.first&&idx.length&&fq(o.freq).d<=31){const p0=addDays(o.date,-Math.round(fq(o.freq).d));const f=Math.min(1,Math.max(0,(t0-p0)/(o.date-p0)));const saved=o.amount*f;bank+=saved;amt-=saved}}
     if(!idx.length){const j=lastIdx(ch,o.date);if(j<0){bank+=amt;return}idx=[j]}
-    const part=amt/idx.length;idx.forEach(i=>ch[i].bills.push({acct:o.acct,name:o.name,part,due:o.date,full:o.amount,pri:o.pri,n:idx.length}))});
+    const part=amt/idx.length;idx.forEach(i=>ch[i].bills.push({acct:o.acct,name:o.name,part,due:o.date,full:o.amount,pri:o.pri,n:idx.length,bid:o.bid||null,last:i===idx[0]}))});
   return bank}
 function leftOf(c){return c.amount-c.bills.reduce((a,b)=>a+b.part,0)-c.spend}
 
@@ -1240,7 +1247,7 @@ function simulate(t0,H,cut){
   const ch=buildCheques(t0,H);const occs=buildOccs(t0,H,cut);const bankNeed=fund(ch,occs,t0,plan.payMode==='full'?'due':'spread');ch.forEach(c=>c.left=leftOf(c));
   const sb=sinceBank();const allow=ch.length?spendPerDay()*Math.max(0,Math.round((ch[0].date-(sb.day<t0?sb.day:t0))/864e5)):0;
   const pre=Math.max(0,allow-sb.sp);
-  let carry=plan.bank-sb.sp-sb.pd-bankNeed-pre;const startShort=carry<0?-carry:0;const carry0=carry;
+  let carry=plan.bank+sb.inc-sb.sp-sb.pd-sb.gt-bankNeed-pre;const startShort=carry<0?-carry:0;const carry0=carry;
   let rp=0,rm=0;ch.slice(0,8).forEach(c=>{rp+=c.left;if(rp<rm)rm=rp});
   const st={};AG.forEach(g=>st[g.id]={saved:g.type==='save'?(g.saved||0):0,bal:g.type==='debt'?g.balance:0,done:null,interest:0,track:[[t0,prog(g,g.type==='save'?(g.saved||0):g.balance)]]});
   if(AG.length)AG.forEach(g=>{if(g.type==='save'&&st[g.id].saved>=g.target)st[g.id].done=t0;if(g.type==='debt'&&g.balance<=0)st[g.id].done=t0});
@@ -1254,7 +1261,7 @@ function simulate(t0,H,cut){
       if(g.type==='save'){const rem=g.target-s.saved;let need=rem;if(g.date){const gd=parse(g.date);if(gd>=c.date){let k=0;for(let j=i;j<ch.length&&ch[j].date<=gd;j++)k++;need=rem/Math.max(1,k)}}
         give=Math.min(avail,need,rem);s.saved+=give;if(s.saved>=g.target-0.005){s.saved=g.target;s.done=c.date}}
       else{give=Math.min(avail,s.bal);s.bal-=give;if(s.bal<=0.005){s.bal=0;s.done=c.date}}
-      if(give>0.005){avail-=give;carry-=give;c.goals.push({name:g.name,give,type:g.type,after:g.type==='save'?s.saved:s.bal,target:g.type==='save'?g.target:g.balance})}}
+      if(give>0.005){avail-=give;carry-=give;c.goals.push({gid:g.id,name:g.name,give,type:g.type,after:g.type==='save'?s.saved:s.bal,target:g.type==='save'?g.target:g.balance})}}
     AG.forEach(g=>{const s=st[g.id];s.track.push([c.date,prog(g,g.type==='save'?s.saved:s.bal)])});
     c.carry=carry;c.short=carry<-0.005?-carry:0;c.extra=c.left-c.goals.reduce((a,x)=>a+x.give,0)});
   while(di<devs.length)debtEv(devs[di++]);
@@ -1272,8 +1279,8 @@ function minOnly(g){let b=g.balance,i=0,m=0;const r=perRate(g);if(g.min<=b*r)ret
 function renderPlan(){const O=planOut;
   if(!income.length){O.innerHTML='<div class="pcard"><h4>Add your income first</h4><p class="muted">The plan works cheque by cheque, so it needs your paydays. Add them under Your numbers.</p><div class="bar"><button class="btn pri" id="goSet">Add income</button></div></div>';goSet.onclick=()=>planTab('inp');return}
   const R=runPlan(),t0=R.t0;let h='';
-  if(plan.ticks){const cut=iso(addDays(t0,-60));let ch=false;for(const k in plan.ticks)if(k.slice(0,10)<cut){delete plan.ticks[k];ch=true}if(ch)savePlan()}
-  h+=`<div class="pcard"><p><b>Starting point</b></p><p class="muted">In the bank ${money(plan.bank)} · cushion ${money(plan.cushion)} · everyday spending ${money(Math.round(spendPerWeek()))}/week · bills ${plan.payMode==='full'?'paid in full, on time':'split into partial payments'}</p><p class="muted">Per month: ${(()=>{const t={debt:0,util:0,living:0};bills.forEach(b=>t[catOf(b)]+=perMonth(b));plan.goals.forEach(g=>{if(g.type==='debt')t.debt+=g.min});t.living+=spendPerDay()*365/12;return CATS.map(([k,l])=>l+' '+money(Math.round(t[k]))).join(' · ')})()}</p>${!plan.spend.length?'<p>No everyday spending added yet. Add groceries, gas and so on under Your numbers, or the plan will think that money is free.</p>':''}</div>`;
+  if(plan.ticks){const cut=iso(addDays(t0,-60));let ch=false;for(const k in plan.ticks){const v=plan.ticks[k];if(k.slice(0,10)<cut||(v&&v.t==='b'&&!hist.some(h=>h.id===v.hid))){delete plan.ticks[k];ch=true}}if(ch)savePlan()}
+  h+=`<div class="pcard"><p><b>Starting point</b></p><p class="muted">In the bank ${money(Math.round(bankNow()))} · cushion ${money(plan.cushion)} · everyday spending ${money(Math.round(spendPerWeek()))}/week · bills ${plan.payMode==='full'?'paid in full, on time':'split into partial payments'}</p><p class="muted">Per month: ${(()=>{const t={debt:0,util:0,living:0};bills.forEach(b=>t[catOf(b)]+=perMonth(b));plan.goals.forEach(g=>{if(g.type==='debt')t.debt+=g.min});t.living+=spendPerDay()*365/12;return CATS.map(([k,l])=>l+' '+money(Math.round(t[k]))).join(' · ')})()}</p>${!plan.spend.length?'<p>No everyday spending added yet. Add groceries, gas and so on under Your numbers, or the plan will think that money is free.</p>':''}</div>`;
   if(R.startShort>0)h+=`<div class="pcard warn"><h4 class="neg">Short before the next payday</h4><p>Bills due before your next cheque, plus spending until then, add up to ${money(Math.round(plan.bank+R.startShort))}. You have ${money(plan.bank)} in the bank, so you're short <b class="neg">${money(Math.round(R.startShort))}</b>. Check that "Money in the bank now" under Your numbers is up to date.</p></div>`;
   if(!AG.length)h+='<div class="pcard"><h4>No goals yet</h4><p class="muted">Add a goal under Your numbers, like saving for a holiday or paying off a credit card. The plan will then show the fastest safe way to get there, cheque by cheque.</p></div>';
   AG.forEach((g,gi)=>{const s=R.st[g.id];const pct=Math.round(prog(g,g.type==='save'?s.saved:s.bal)*100);const col=COLORS[gi%COLORS.length];let line='';
@@ -1306,22 +1313,35 @@ function renderPlan(){const O=planOut;
   const add=n=>{const L=chqList;all.slice(shown,shown+n).forEach(c=>{const tg=c.goals.reduce((a,x)=>a+x.give,0);const el=document.createElement('div');el.className='chq';
     const byA={};c.bills.forEach(b=>byA[b.acct]=(byA[b.acct]||0)+b.part);
     const into=Object.keys(byA).length?`<div class="ln t"><span>Set aside for bills</span><span></span></div>`+accts().filter(a=>byA[a.id]).map(a=>`<div class="ln"><span>Into ${esc(a.name)}</span><span>${money(r2(byA[a.id]))}</span></div>`).join('')+(Object.keys(byA).some(k=>!accts().find(a=>a.id===k))?'':''):'';
-    const cd=iso(c.date),keys=[];const ck=(k,label,amt,cls)=>{keys.push(k);return`<label class="ckl"><input type="checkbox" data-tk="${esc(k)}"${plan.ticks&&plan.ticks[k]?' checked':''}><span class="ckn">${label}</span><span class="${cls||''}">${amt}</span></label>`};
-    const bl=into+c.bills.map(b=>ck(cd+'|b|'+b.name+'|'+iso(b.due),`${esc(b.name)} <span class="acct">${esc(acctName(b.acct))}</span><small>due ${fmtD(b.due)}${b.n>1?' · 1 of '+b.n+' parts':''}</small>`,money(r2(b.part)))).join('');
+    const cd=iso(c.date),keys=[],TI={},TK=plan.ticks||{};const rec=k=>TK[k]&&typeof TK[k]==='object'&&(TK[k].t==='b'||TK[k].t==='g');
+    const ck=(k,label,amt,cls,info)=>{if(rec(k))k+='+';keys.push(k);if(info)TI[k]=info;return`<label class="ckl"><input type="checkbox" data-tk="${esc(k)}"${TK[k]?' checked':''}><span class="ckn">${label}</span><span class="${cls||''}">${amt}</span></label>`};
+    const done=Object.keys(TK).filter(k=>k.startsWith(cd+'|')&&rec(k)).map(k=>{keys.push(k);const v=TK[k];return`<label class="ckl"><input type="checkbox" data-tk="${esc(k)}" checked><span class="ckn">${v.t==='b'?esc(v.name)+'<small>paid '+fmtD(new Date(v.at))+'</small>':'Toward '+esc(v.name)+'<small>moved '+fmtD(new Date(v.at))+'</small>'}</span><span class="${v.t==='g'?'pos':''}">${m2(v.a)}</span></label>`}).join('');
+    const bl=into+c.bills.map(b=>ck(cd+'|b|'+b.name+'|'+iso(b.due),`${esc(b.name)} <span class="acct">${esc(acctName(b.acct))}</span><small>due ${fmtD(b.due)}${b.n>1?' · '+(b.last?'last of ':'1 of ')+b.n+' parts':''}</small>`,money(r2(b.part)),'',b.bid&&b.last?{t:'b',bid:b.bid,name:b.name}:null)).join('')+done;
     el.innerHTML=`<div class="chq-h"><span class="ic">$</span><div class="nm"><b>${fmtD(c.date)}${c.date.getFullYear()!==t0.getFullYear()?' '+c.date.getFullYear():''} · ${esc(c.who)}</b><small>${c.short?'<span class="neg">short '+money(Math.round(c.short))+'</span>':tg?'to goals '+money(Math.round(tg)):'extra '+money(Math.round(Math.max(0,c.extra)))}</small></div><div class="amt pos">${c.est?'~':''}${money(c.amount)}</div></div>
       <div class="chq-b"><button class="lnkbtn" data-payamt="${c.iid}|${iso(c.date)}">${c.est?(c.shi?'Estimated from '+shiftTxt(c.shi)+' · set the real amount':'Estimated from your last cheques · set the real amount'):'Change this cheque\'s amount'}</button>${bl||'<div class="ln"><span>No bills set aside from this cheque</span><span></span></div>'}<div class="ln"><span>Everyday spending · ${c.days} days</span><span>${money(Math.round(c.spend))}</span></div>
-      ${c.goals.map(x=>x.type==='save'?ck(cd+'|g|'+x.name,`Toward ${esc(x.name)}<small>Goal: ${m2(x.target)}</small>`,`${m2(x.give)} / ${m2(x.after)}`,'pos')
-        :ck(cd+'|g|'+x.name,`Toward ${esc(x.name)}<small>Owed: ${m2(x.target)}</small>`,`${m2(x.give)} / ${m2(x.after)} left`,'pos')).join('')}
+      ${c.goals.map(x=>x.type==='save'?ck(cd+'|g|'+x.name,`Toward ${esc(x.name)}<small>Goal: ${m2(x.target)}</small>`,`${m2(x.give)} / ${m2(x.after)}`,'pos',{t:'g',gid:x.gid,name:x.name,a:r2(x.give)})
+        :ck(cd+'|g|'+x.name,`Toward ${esc(x.name)}<small>Owed: ${m2(x.target)}</small>`,`${m2(x.give)} / ${m2(x.after)} left`,'pos',{t:'g',gid:x.gid,name:x.name,a:r2(x.give)})).join('')}
       ${c.short?`<div class="ln t"><span>Short this cheque</span><span class="neg">${money(Math.round(c.short))}</span></div>`:c.extra<-0.5?`<div class="ln t"><span>Topped up from money already in the account</span><span>${money(Math.round(-c.extra))}</span></div>`:`<div class="ln t"><span>Extra left</span><span>${money(Math.round(c.extra))}</span></div>`}
       ${c.reserve>0.5&&!c.short?`<div class="ln"><span>Held back for heavier cheques ahead</span><span>${money(Math.round(c.reserve))}</span></div>`:''}
       ${Math.round(c.carry-plan.cushion)>0?`<div class="ln t sur"><span>Surplus</span><span class="lime">${money(Math.round(c.carry-plan.cushion))}</span></div>`:''}</div>`;
     const sm=el.querySelector('.chq-h small');const base=sm.innerHTML;const upd=()=>{const n=keys.filter(k=>plan.ticks&&plan.ticks[k]).length;sm.innerHTML=(keys.length&&n?`<span class="lime">${n} of ${keys.length} ticked</span> · `:'')+base};upd();
-    el.querySelectorAll('[data-tk]').forEach(x=>x.onchange=()=>{plan.ticks=plan.ticks||{};if(x.checked)plan.ticks[x.dataset.tk]=1;else delete plan.ticks[x.dataset.tk];savePlan();upd()});
+    el.querySelectorAll('[data-tk]').forEach(x=>x.onchange=()=>{const k=x.dataset.tk,keep=document.querySelector('.chq.open')?[...chqList.children].indexOf(el):-1;if(tickSet(k,x.checked,TI[k])){savePlan();renderPlan();reopenChq(keep);renderSafe();renderPlanSettings()}else{x.checked=!!(plan.ticks&&plan.ticks[k]);upd()}});
     if(!shown&&!L.children.length)el.classList.add('open');
     {const pb=el.querySelector('[data-payamt]');if(pb)pb.onclick=e=>{e.stopPropagation();const [i,k]=pb.dataset.payamt.split('|');openPayAmt(i,k,false)}}
     el.querySelector('.chq-h').onclick=()=>el.classList.toggle('open');L.appendChild(el)});shown+=n;chqMore.style.display=shown>=all.length?'none':''};
   add(8);chqMore.onclick=()=>add(8)}
 
+/* ticking in the payday checklist: a bill's last part = paid; a goal = money moved */
+function goalApply(gid,a){if(!gid)return;if(gid.startsWith('bill:')){const b=bills.find(x=>x.id===gid.slice(5));if(b&&b.balance>0){b.balance=Math.max(0,r2(b.balance-a));save()}return}
+  const g=plan.goals.find(x=>x.id===gid);if(!g)return;if(g.type==='save')g.saved=Math.max(0,r2((g.saved||0)+a));else g.balance=Math.max(0,r2((g.balance||0)-a))}
+function tickSet(k,on,info){plan.ticks=plan.ticks||{};const cur=plan.ticks[k];
+  if(on){if(info&&info.t==='b'){const b=bills.find(x=>x.id===info.bid);if(b){const amt=b.amount;settle(b,'paid',amt);const h=hist[hist.length-1];plan.ticks[k.replace(/\+$/,'')]={t:'b',at:Date.now(),hid:h.id,name:b.name,a:amt};return true}}
+    if(info&&info.t==='g'&&info.a>0){goalApply(info.gid,info.a);plan.ticks[k.replace(/\+$/,'')]={t:'g',at:Date.now(),gid:info.gid,name:info.name,a:info.a};return true}
+    plan.ticks[k]=1;return true}
+  if(cur&&cur.t==='b'){if(hist.some(h=>h.id===cur.hid)){undoHist(cur.hid);if(hist.some(h=>h.id===cur.hid))return false}delete plan.ticks[k];return true}
+  if(cur&&cur.t==='g'){goalApply(cur.gid,-cur.a);delete plan.ticks[k];return true}
+  delete plan.ticks[k];return true}
+function reopenChq(i){if(i>=0&&chqList.children[i])chqList.children[i].classList.add('open')}
 function goalCard(g,R,sub,foot){const s=R.st[g.id],t0=R.t0,save=g.type==='save';
   let ik=save?(guessIcon(g.name)||'savings'):(g.fromBill&&(bills.find(b=>b.id===g.fromBill)||{}).icon)||guessIcon(g.name)||'ccard';if(!BI[ik])ik=save?'savings':'ccard';
   const gd=g.date?parse(g.date):null;let chip;
@@ -1348,7 +1368,7 @@ function chartSvg(R){const W=340,Hh=150,pl=34,pr=8,pt=10,pb=22;let end=R.t0;
   AG.forEach((gl,i)=>{const pts=R.st[gl.id].track.filter(p=>p[0]<=end).map(p=>X(p[0]).toFixed(1)+','+Y(p[1]).toFixed(1)).join(' ');g+=`<polyline points="${pts}" fill="none" stroke="${COLORS[i%COLORS.length]}" stroke-width="2.5" stroke-linejoin="round"/>`});
   return`<div class="pcard"><p><b>Progress toward goals</b></p><svg viewBox="0 0 ${W} ${Hh}" width="100%" style="color:var(--text);display:block">${g}</svg><div class="leg">${AG.map((gl,i)=>`<span><i style="background:${COLORS[i%COLORS.length]}"></i>${esc(gl.name)}</span>`).join('')}</div></div>`}
 
-function renderPlanSettings(){renderAccts();pBank.value=plan.bank||'';pCush.value=plan.cushion;pMode.value=plan.payMode||'split';
+function renderPlanSettings(){renderAccts();pBank.value=plan.bankAt||plan.bank?bankNow().toFixed(2):'';pBankNote.textContent=bankNote();pCush.value=plan.cushion;pMode.value=plan.payMode||'split';
   spList.innerHTML=plan.spend.length?plan.spend.map(x=>`<div class="row" data-id="${x.id}"><div class="nm"><b>${esc(x.name)}</b></div><div class="amt">${money(x.amount)}<small class="muted">per ${x.per}</small></div></div>`).join('')+`<div class="row" style="cursor:default"><div class="nm"><b>Total</b></div><div class="amt">${money(Math.round(spendPerWeek()))}<small class="muted">per week</small></div></div>`
     :'<div class="empty">Add groceries, gas, kids, fun money and anything else you spend on regularly.</div>';
   spList.querySelectorAll('.row[data-id]').forEach(r=>r.onclick=()=>openSp(r.dataset.id));
@@ -1357,7 +1377,7 @@ function renderPlanSettings(){renderAccts();pBank.value=plan.bank||'';pCush.valu
     :'<div class="empty">Add a goal, like a holiday fund or paying off a credit card.</div>';
   glList.querySelectorAll('.row[data-id]').forEach(r=>r.onclick=()=>{const id=r.dataset.id;if(id.startsWith('bill:'))openEdit(id.slice(5));else openGl(id)});
   glList.querySelectorAll('[data-up]').forEach(b=>b.onclick=e=>{e.stopPropagation();const i=+b.dataset.up;const ids=GL.map(g=>g.id);[ids[i-1],ids[i]]=[ids[i],ids[i-1]];plan.order=ids;savePlan();renderPlanSettings();if(!vPlan.hidden&&!planOut.hidden)renderPlan()})}
-pBank.onchange=()=>{plan.bank=Math.round((parseFloat(pBank.value)||0)*100)/100;plan.bankAt=Date.now();savePlan();renderSafe()};
+pBank.onchange=()=>{plan.bank=Math.round((parseFloat(pBank.value)||0)*100)/100;plan.bankAt=Date.now();plan.bankInc=payToday()>0;savePlan();pBankNote.textContent=bankNote();renderSafe()};
 pMode.onchange=()=>{plan.payMode=pMode.value;savePlan();if(!vPlan.hidden&&!planOut.hidden)renderPlan()};
 pCush.onchange=()=>{plan.cushion=Math.max(0,Math.round(parseFloat(pCush.value)||0));savePlan();pCush.value=plan.cushion};
 let spId=null;
@@ -1382,15 +1402,30 @@ gSave.onclick=()=>{const n=gName.value.trim(),num=v=>parseFloat(v);if(!n){gErr.t
   if(glId){const g=plan.goals.find(i=>i.id===glId);Object.keys(g).forEach(k=>{if(k!=='id')delete g[k]});Object.assign(g,d)}else plan.goals.push({id:uid(),...d});savePlan();glBg.classList.remove('on');render()};
 gDel.onclick=()=>{plan.goals=plan.goals.filter(i=>i.id!==glId);savePlan();glBg.classList.remove('on');render()};
 
+function bankDay(){const d=plan.bankAt?new Date(plan.bankAt):today();d.setHours(0,0,0,0);return d}
+function payToday(){const t=today();return income.reduce((a,x)=>a+incOcc(x,t,t).reduce((b,d)=>b+payAmt(x,d),0),0)}
+function skipToday(){return!!(plan.bankAt&&plan.bankInc&&+bankDay()===+today())}
 function sinceBank(){const at=plan.bankAt||0;const sp=(plan.log||[]).filter(l=>(l.at||0)>at).reduce((a,l)=>a+l.amount,0);
-  const pd=hist.filter(h=>h.type==='paid'&&(h.at||0)>at).reduce((a,h)=>a+h.amount,0);const d=at?new Date(at):today();d.setHours(0,0,0,0);return{sp,pd,day:d}}
+  const pd=hist.filter(h=>h.type==='paid'&&(h.at||0)>at).reduce((a,h)=>a+h.amount,0);const d=bankDay(),t0=today();
+  let inc=0,nInc=0;if(at){const from=plan.bankInc?addDays(d,1):d,to=addDays(t0,-1);if(from<=to)income.forEach(x=>incOccCal(x,from,to).forEach(o=>{if(o>=from&&o<=to){inc+=payAmt(x,o);nInc++}}))}
+  const gt=Object.values(plan.ticks||{}).filter(v=>v&&v.t==='g'&&(v.at||0)>at).reduce((a,v)=>a+(v.a||0),0);
+  return{sp,pd,inc,nInc,gt,day:d}}
+/* running total: what you typed in, plus paydays since, minus bills paid, goal transfers ticked and spending logged */
+function runBal(){const s=sinceBank();return r2(plan.bank+s.inc-s.sp-s.pd-s.gt)}
+function bankNow(){return r2(runBal()+(skipToday()?0:payToday()))}
+function bankNote(){if(!plan.bankAt)return'What\'s in your account today. After that, Stacks keeps it up to date.';const s=sinceBank(),pt=skipToday()?0:payToday(),p=[];
+  if(s.inc)p.push('+'+money(Math.round(s.inc))+' pay');if(pt)p.push('+'+money(Math.round(pt))+' today\'s pay');if(s.pd)p.push('−'+money(Math.round(s.pd))+' bills paid');if(s.gt)p.push('−'+money(Math.round(s.gt))+' to goals');if(s.sp)p.push('−'+money(Math.round(s.sp))+' spending');
+  return`From ${money(plan.bank)} you typed in ${fmtD(bankDay())}${p.length?' · '+p.join(' · '):''}. Type your real balance any time to reset it.`}
 function periodStart(per){const t=today();if(per==='month')return new Date(t.getFullYear(),t.getMonth(),1);const dow=(t.getDay()+6)%7;return addDays(t,-dow)}
 function spentIn(itemId,per){const st=iso(periodStart(per));return(plan.log||[]).filter(l=>l.item===itemId&&l.date>=st).reduce((a,l)=>a+l.amount,0)}
+/*CUSTOM:start Alex and Ashlee only: "Other" spending comes out of one spending item (default: the fun one) */
+function cuOther(){if(plan.otherInto!==undefined)return plan.spend.some(x=>x.id===plan.otherInto)?plan.otherInto:'';const f=plan.spend.find(x=>/fun|weekly cash/i.test(x.name));return f?f.id:''}
+spentIn=(f=>(id,per)=>f(id,per)+(id!=='other'&&id&&id===cuOther()?f('other',per):0))(spentIn);
+/*CUSTOM:end*/
 function renderSafe(){const C=safeCard;if(!income.length){C.innerHTML='';budSub.textContent='';return}
   AG=allGoals();const R=runPlan();const ch0=R.ch[0];const t0=today();
   const extra=Math.max(0,R.carry0-plan.cushion-R.reserve0);const goalsOn=AG.some(g=>{const d=R.st[g.id].done;return!d||d>t0});
   const safe=R.pre+(goalsOn?0:extra);
-  const stale=plan.bankAt?income.some(x=>incOcc(x,addDays(new Date(new Date(plan.bankAt).setHours(0,0,0,0)),1),t0).length):true;
   const days=ch0?Math.round((ch0.date-t0)/864e5):0;
   budSub.innerHTML=(R.startShort>0?'<span class="neg" style="font-weight:700">Short before payday</span>':'<span class="lime" style="font-weight:700">On track</span>')+(ch0?' · next payday '+esc(ch0.date.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})):'');
   let h=gaugeHTML(R,safe,goalsOn,extra,ch0,days);
@@ -1399,10 +1434,10 @@ function renderSafe(){const C=safeCard;if(!income.length){C.innerHTML='';budSub.
   plan.spend.forEach(x=>{const sp=spentIn(x.id,x.per),pct=x.amount?Math.min(100,sp/x.amount*100):0,over=sp>x.amount;
     h+=`<div style="margin-top:8px;font-size:13px"><div style="display:flex;justify-content:space-between"><span>${esc(x.name)}</span><span class="${over?'neg':''}">${money(Math.round(sp))} of ${money(x.amount)} this ${x.per}</span></div><div class="pbar" style="margin:4px 0 0;height:6px"><i style="width:${pct}%;background:${over?'var(--red)':'#1D9E75'}"></i></div></div>`});
   const other=(plan.log||[]).filter(l=>l.item==='other'&&l.date>=iso(periodStart('week'))).reduce((a,l)=>a+l.amount,0);
-  if(other>0)h+=`<p class="muted" style="font-size:13px">Other spending this week: ${money(Math.round(other))}</p>`;
+  if(other>0)h+=`<p class="muted othsp" style="font-size:13px">Other spending this week: ${money(Math.round(other))}</p>`;
   h+=`<div class="bar"><button class="btn pri" id="logBtn">+ Log spending</button><button class="btn" id="bankBtn">Update bank</button></div>`;
-  h+=`<p style="font-size:12px;margin:8px 0 0" class="${stale?'neg':'muted'}">${plan.bankAt?'Bank balance updated '+agoTxt(plan.bankAt):'Bank balance not set yet'}${stale?'. A payday has passed since, so update it for a true number.':''}</p></div>`;
-  C.innerHTML=h;logBtn.onclick=()=>openLog();bankBtn.onclick=()=>{bkIn.value=plan.bank||'';bankErr.textContent='';bankBg.classList.add('on')}}
+  h+=`<p style="font-size:12px;margin:8px 0 0" class="muted">${plan.bankAt?'In the bank now (running total): <b>'+money(Math.round(bankNow()))+'</b> · you last typed it in '+agoTxt(plan.bankAt):'<span class="neg">Bank balance not set yet</span>'}</p></div>`;
+  C.innerHTML=h;logBtn.onclick=()=>openLog();bankBtn.onclick=openBank}
 function gaugeHTML(R,safe,goalsOn,extra,ch0,days){const total=R.allow+(goalsOn?0:extra);const frac=total>0?Math.max(0,Math.min(1,safe/total)):(safe>0?1:0);
   const N=21,on=safe>0?Math.max(1,Math.round(frac*N)):0;const col=(R.startShort>0||safe<=0)?'var(--red)':frac<.25?'#FFC94A':'var(--lime)';let seg='';
   for(let i=0;i<N;i++){const a=Math.PI-i*Math.PI/(N-1),c=Math.cos(a),sn=Math.sin(a);seg+=`<line x1="${(150+100*c).toFixed(1)}" y1="${(150-100*sn).toFixed(1)}" x2="${(150+126*c).toFixed(1)}" y2="${(150-126*sn).toFixed(1)}" stroke="${i<on?col:'var(--line)'}" stroke-width="13" stroke-linecap="round"/>`}
@@ -1484,7 +1519,7 @@ scanIn.onchange=async()=>{const f=scanIn.files&&scanIn.files[0];if(!f)return;con
     const k=guessIcon((shop+' '+txt.split('\n').slice(0,4).join(' ')));if(k){const m=plan.spend.find(x=>guessIcon(x.name)===k);if(m)renderCats(m.id)}}
   catch(e){if(run===SCAN.run)scanStat.textContent=navigator.onLine===false?'The first scan needs internet to download the reader. Type the amount in for now.':'Couldn\'t read that photo. Type the amount in below.'}};
 function agoTxt(at){const d=Math.floor((Date.now()-at)/864e5);return d<=0?'today':d===1?'yesterday':d+' days ago'}
-function openLog(){lgItem.innerHTML=plan.spend.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')+'<option value="other">Other</option>';
+function openLog(){LOGN=8;lgItem.innerHTML=plan.spend.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')+'<option value="other">Other</option>';
   lgAmt.value='';lgNote.value='';lgDate.value=iso(today());lgErr.textContent='';scanReset();scanWrap.hidden=!IS_PHONE;renderCats(lgItem.value);renderLogList();logBg.classList.add('on');if(!IS_PHONE)setTimeout(()=>{try{lgAmt.focus()}catch(_){}},50)}
 const IS_PHONE=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
 function catIcon(n){const k=guessIcon(n);return BI[k]?k:'cash'}
@@ -1492,7 +1527,8 @@ function renderCats(sel){const items=[...plan.spend.map(x=>[x.id,x.name]),['othe
   lgCats.innerHTML=items.map(([id,n])=>`<button type="button" data-ci="${id}" class="${id===sel?'on':''}" aria-pressed="${id===sel}">${icoHTML({icon:catIcon(n==='Other'?'':n)})}<span>${esc(n)}</span></button>`).join('');
   lgCats.querySelectorAll('[data-ci]').forEach(b=>b.onclick=()=>renderCats(b.dataset.ci));
   const nm=(items.find(x=>x[0]===sel)||[0,'Other'])[1];lgSave.textContent='Save to '+nm}
-function renderLogList(){const items=[...(plan.log||[])].reverse().slice(0,8);const nm=id=>id==='other'?'Other':(plan.spend.find(x=>x.id===id)||{name:'Removed'}).name;
+let LOGN=8;
+function renderLogList(){const items=[...(plan.log||[])].reverse().slice(0,LOGN);const nm=id=>id==='other'?'Other':(plan.spend.find(x=>x.id===id)||{name:'Removed'}).name;
   lgList.innerHTML=items.length?'<div class="sec" style="margin:14px 0 2px">Recent</div>'+items.map(l=>`<div class="hrow2"><div class="nm"><b>${esc(nm(l.item))}</b><small>${fmtD(parse(l.date))}${l.note?' · '+esc(l.note):''}</small></div><div class="amt">${money(l.amount)}</div><button class="upb" data-dl="${l.id}" aria-label="Delete">×</button></div>`).join(''):'';
   lgList.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{plan.log=plan.log.filter(l=>l.id!==b.dataset.dl);savePlan();renderLogList();renderSafe()})}
 lgSave.onclick=async()=>{const a=parseFloat(lgAmt.value);if(!(a>0)){lgErr.textContent='Enter an amount';return}if(!lgDate.value){lgErr.textContent='Pick a date';return}
@@ -1500,7 +1536,8 @@ lgSave.onclick=async()=>{const a=parseFloat(lgAmt.value);if(!(a>0)){lgErr.textCo
   plan.log=plan.log||[];plan.log.push({id:uid(),at:Date.now(),date:lgDate.value,amount:Math.round(a*100)/100,item:lgItem.value,note:lgNote.value.trim()});if(plan.log.length>3000)plan.log=plan.log.slice(-3000);
   savePlan();logBg.classList.remove('on');scanReset();renderSafe();if(!vIns.hidden)renderIns();toast('Logged '+money(Math.round(a*100)/100))};
 lgCancel.onclick=()=>{logBg.classList.remove('on');scanReset()};lgAmt.oninput=()=>lgErr.textContent='';
-bankSave.onclick=()=>{const v=parseFloat(bkIn.value);if(bkIn.value===''||isNaN(v)){bankErr.textContent='Enter your balance';return}plan.bank=Math.round(v*100)/100;plan.bankAt=Date.now();savePlan();bankBg.classList.remove('on');renderPlanSettings();renderSafe();if(!vPlan.hidden&&!planOut.hidden)renderPlan()};
+function openBank(){bkIn.value=plan.bankAt||plan.bank?bankNow().toFixed(2):'';bankErr.textContent='';const pt=payToday()>0;bkIncRow.style.display=pt?'':'none';bkInc.checked=true;bkNote.textContent=plan.bankAt?'Stacks\' running total is filled in. Change it to what your bank shows.':'';bankBg.classList.add('on')}
+bankSave.onclick=()=>{const v=parseFloat(bkIn.value);if(bkIn.value===''||isNaN(v)){bankErr.textContent='Enter your balance';return}plan.bank=Math.round(v*100)/100;plan.bankAt=Date.now();plan.bankInc=payToday()>0&&bkInc.checked;savePlan();bankBg.classList.remove('on');renderPlanSettings();renderSafe();if(!vPlan.hidden&&!planOut.hidden)renderPlan()};
 bankCancel.onclick=()=>bankBg.classList.remove('on');
 
 function runWhatIf(R){WIin={spend:wiSpend.value,inc:wiInc.value,buy:wiBuy.value,date:wiDate.value};
@@ -1942,6 +1979,18 @@ cuGo.onclick=()=>{cuErr.textContent='';const m=cuCode.value.replace(/\s+/g,'').m
   Object.assign(x,{freq:c.freq||x.freq,date:c.date||x.date,anchor:c.date?parse(c.date).getDate():x.anchor,vary:true,est:'shift',sh:c.sh});
   if(c.stubDays!=null)x.stubDays=c.stubDays;if(c.ytd)x.ytd=c.ytd;x.over={...(x.over||{}),...(c.over||{})};x.amount=usualPay(x);
   saveInc();render();cuCode.value='';const n=incNext(x);toast(`${x.name} is set up. Next cheque ${payEst(x,n)?'~':''}${money(payAmt(x,n))}`)};
+/*CUSTOM:end*/
+/*CUSTOM:start Alex and Ashlee only: "Spent this week" card at the top of Plan */
+function cuSpentCard(){if(!plan.spend.length&&!(plan.log||[]).length)return'';const mo=cuOther();let h='';
+  plan.spend.forEach(x=>{const sp=spentIn(x.id,x.per),pct=x.amount?Math.min(100,sp/x.amount*100):0,over=sp>x.amount+0.005;
+    h+=`<div class="cusp"><div class="cusl"><span>${esc(x.name)}${x.id===mo?' + other':''}</span><span class="${over?'neg':''}">${money(Math.round(sp))} of ${money(x.amount)}${x.per==='month'?' this month':''}</span></div><div class="pbar"><i style="width:${pct}%;background:${over?'var(--red)':'#1D9E75'}"></i></div></div>`});
+  if(!mo){const o=spentIn('other','week');if(o>0)h+=`<div class="cusp"><div class="cusl"><span>Other</span><span>${money(Math.round(o))}</span></div></div>`}
+  return`<div class="pcard cucard"><p><b>Spent this week</b></p>${h}<button type="button" class="lnkbtn" id="cuSeeAll">See every purchase</button></div>`}
+renderPlan=(f=>function(){f.apply(this,arguments);const c=cuSpentCard();if(!c)return;planOut.insertAdjacentHTML('afterbegin',c);cuSeeAll.onclick=()=>{openLog();LOGN=60;renderLogList();setTimeout(()=>{try{lgList.scrollIntoView({block:'start',behavior:'smooth'})}catch(_){}},80)}})(renderPlan);
+renderSafe=(f=>function(){f.apply(this,arguments);if(cuOther()){const e=safeCard.querySelector('.othsp');if(e)e.remove()}})(renderSafe);
+function cuFillOther(){const v=cuOther();cuOth.innerHTML=plan.spend.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')+'<option value="">Keep Other on its own</option>';cuOth.value=v}
+gearBtn.addEventListener('click',cuFillOther);
+cuOth.onchange=()=>{plan.otherInto=cuOth.value;savePlan();renderSafe()};
 /*CUSTOM:end*/
 window.addEventListener('resize',()=>renderCols());
 window.addEventListener('orientationchange',()=>setTimeout(renderCols,200));
