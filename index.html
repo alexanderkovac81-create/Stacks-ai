@@ -215,11 +215,6 @@ textarea{width:100%;min-height:90px;font:12px ui-monospace,monospace;padding:10p
 #editBg h3,#payBg h3{padding-right:44px}
 .totop{position:fixed;right:max(23px,calc(50% - 271px));bottom:calc(92px + env(safe-area-inset-bottom));width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--text);opacity:.94;box-shadow:0 4px 14px rgba(0,0,0,.35);z-index:6;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .totop[hidden]{display:none}
-.pbrow{margin-top:8px;font-size:13px}.pbrow .cusl{display:flex;justify-content:space-between;gap:8px}.pbrow .pbar{position:relative;margin:4px 0 0;height:7px}
-.pbrow .pbar em{position:absolute;top:-3px;width:2px;height:13px;background:var(--text);opacity:.55;transform:translateX(-1px)}
-.nowchq{border-color:var(--lime)}.pastp .chq-h{position:relative}
-.pastx{border:1px solid var(--line);background:var(--chip);color:var(--muted);border-radius:999px;min-width:32px;height:32px;padding:0 10px;font:inherit;font-size:16px;cursor:pointer;flex:none;margin-left:8px}
-.pastx.sure{color:var(--red);border-color:var(--red);font-size:13px;font-weight:700}
 /*CUSTOM:start*/.cucard .cusp{margin-top:8px;font-size:13px}.cucard .cusl{display:flex;justify-content:space-between;gap:8px}.cucard .pbar{margin:4px 0 0;height:6px}.cucard .lnkbtn{margin-top:10px}/*CUSTOM:end*/
 .totop svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .sheet{background:var(--card);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px 24px;max-height:92vh;overflow:auto}
@@ -1156,7 +1151,7 @@ fMode.onchange=fFreq.onchange=fCnt.onchange=syncForm;
 function paysBefore(due,freq){const d=parse(due),prev=addDays(d,-Math.round(fq(freq).d));let n=0;income.forEach(x=>incOccCal(x,addDays(prev,1),d).forEach(o=>{if(o>prev&&o<=d)n++}));return n}
 function syncSplit(){const on=fPri.value==='flex';fSplitW.hidden=!on;if(!on)return;let h='Parts come out of the paydays before it\'s due, so it\'s still paid on time.';
   if(fDue.value){const n=paysBefore(fDue.value,fFreq.value);if(n)h=`About ${n} payday${n>1?'s':''} land before each due date for this bill. `+h}
-  if(plan.payMode!=='full')h+=' Right now Paying bills is set to partial payments, so Flexible bills are spread over every payday before they\'re due. This choice kicks in if you switch to pay in full.';fSplitHint.textContent=h}
+  if(plan.payMode!=='full')h+=' Right now Paying bills is set to partial payments, so every bill is already split. This kicks in if you switch to pay in full.';fSplitHint.textContent=h}
 fPri.addEventListener('change',syncSplit);fFreq.addEventListener('change',syncSplit);fDue.addEventListener('change',syncSplit);
 [fBal,fApr,fLeft,fAmt,fDue].forEach(i=>i.addEventListener('input',syncForm));fIncl.onchange=fGoal.onchange=syncForm;let inclTouched=false;fIncl.addEventListener('change',()=>inclTouched=true);
 [fName,fAmt,fDue].forEach(i=>i.oninput=()=>fErr.textContent='');
@@ -1185,7 +1180,7 @@ function openPay(id){payId=id;const b=bills.find(x=>x.id===id);payTitle.textCont
 function nextDue(b){return stepF(parse(b.due),b.freq,b.anchor)}
 payCancel.onclick=()=>payBg.classList.remove('on');
 document.querySelectorAll('.sheetx').forEach(b=>b.onclick=()=>b.closest('.sheet-bg').classList.remove('on'));
-function syncTop(){toTop.hidden=window.scrollY<500}
+function syncTop(){toTop.hidden=vBills.hidden||window.scrollY<500}
 window.addEventListener('scroll',syncTop,{passive:true});toTop.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
 payEdit.onclick=()=>{payBg.classList.remove('on');openEdit(payId)};
 const HKEY='billColumns.hist2';let hist=[];
@@ -1249,27 +1244,21 @@ function buildOccs(t0,H,cut){const occs=[];const gb=new Set(AG.filter(g=>g.fromB
   return occs}
 function lastIdx(ch,d){let lo=0,hi=ch.length-1,r=-1;while(lo<=hi){const m=(lo+hi)>>1;if(ch[m].date<=d){r=m;lo=m+1}else hi=m-1}return r}
 function fund(ch,occs,t0,mode){let bank=0;ch.grps=[];
-  occs.forEach(o=>{if(o.date<t0){bank+=o.amount;return}let idx=[],amt=o.amount;const sp=mode==='spread'?(o.pri==='important'?2:o.pri==='flex'?Infinity:1):(o.split==='all'?Infinity:(+o.split||0));
+  occs.forEach(o=>{if(o.date<t0){bank+=o.amount;return}let idx=[],amt=o.amount;const sp=mode==='spread'||o.split==='all'?Infinity:(+o.split||0);
     if(sp>1){const j=lastIdx(ch,o.date);for(let i=j;i>=0&&ch[i].date>o.prev&&idx.length<sp;i--)idx.push(i);
-      var saved=0;if(mode==='spread'&&sp===Infinity&&o.first&&idx.length&&fq(o.freq).d<=31){const p0=addDays(o.date,-Math.round(fq(o.freq).d));const f=Math.min(1,Math.max(0,(t0-p0)/(o.date-p0)));saved=o.amount*f;bank+=saved;amt-=saved}}
-    if(!idx.length){const j=lastIdx(ch,o.date);if(j<0){bank+=amt;if(mode==='spread'&&o.pri==='flex')ch.grps.push({due:o.date,bank:0,pre:amt,items:[],pri:o.pri,late:true,tpl:{acct:o.acct,name:o.name,due:o.date,full:o.amount,pri:o.pri,bid:o.bid||null}});return}idx=[j]}
-    const part=amt/idx.length,grp={due:o.date,bank:typeof saved==='number'?saved:0,items:[],pri:o.pri,late:mode==='spread'&&o.pri==='flex'};
+      var saved=0;if(mode==='spread'&&o.first&&idx.length&&fq(o.freq).d<=31){const p0=addDays(o.date,-Math.round(fq(o.freq).d));const f=Math.min(1,Math.max(0,(t0-p0)/(o.date-p0)));saved=o.amount*f;bank+=saved;amt-=saved}}
+    if(!idx.length){const j=lastIdx(ch,o.date);if(j<0){bank+=amt;return}idx=[j]}
+    const part=amt/idx.length,grp={due:o.date,bank:typeof saved==='number'?saved:0,items:[]};
     idx.slice().reverse().forEach(i=>{const e={acct:o.acct,name:o.name,part,due:o.date,full:o.amount,pri:o.pri,n:idx.length,bid:o.bid||null,last:i===idx[0],grp,ci:i};ch[i].bills.push(e);grp.items.push(e)});ch.grps.push(grp)});
   return bank}
 /* keep every cheque from going short while still paying each bill by its due date:
    1) if the bank can't hold the part of a bill that's assumed already set aside, move it into that bill's remaining cheques
    2) if a cheque can't cover its set-asides, push parts to a later cheque that's still before the due date */
-function level(ch,start,floor){const G=ch.grps||[];let s=start;const rk=e=>e.pri==='flex'?0:e.pri==='important'?1:2;
+function level(ch,start,floor){const G=ch.grps||[];let s=start;
   if(s<floor)for(const g of G.filter(g=>g.bank>0.005).sort((a,b)=>b.due-a.due)){if(s>=floor-0.005)break;const mv=Math.min(g.bank,floor-s);g.bank-=mv;s+=mv;g.items.forEach(e=>e.part+=mv/g.items.length)}
-  /* still in the hole before the first payday: a Flexible bill due before then can wait for that payday (late, last resort) */
-  if(s<-0.005&&ch.length)for(const g of G.filter(g=>g.pre>0.005&&ch[0].date<=addDays(g.due,45)).sort((a,b)=>b.due-a.due)){if(s>=-0.005)break;const mv=Math.min(g.pre,-s);g.pre-=mv;s+=mv;
-    const e={...g.tpl,part:mv,n:1,last:true,grp:g,ci:0,late:true};ch[0].bills.push(e);g.items.push(e)}
-  let run=s;ch.forEach((c,i)=>{let left=leftOf(c);if(run+left<floor-0.005){let need=floor-(run+left);
-      for(const e of c.bills.filter(e=>e.grp&&e.grp.items.indexOf(e)<e.grp.items.length-1&&e.part>0.005).sort((a,b)=>rk(a)-rk(b)||b.due-a.due)){if(need<=0.005)break;
+  let run=s;ch.forEach(c=>{let left=leftOf(c);if(run+left<floor-0.005){let need=floor-(run+left);
+      for(const e of c.bills.filter(e=>e.grp&&e.grp.items.indexOf(e)<e.grp.items.length-1&&e.part>0.005).sort((a,b)=>b.due-a.due)){if(need<=0.005)break;
         const nx=e.grp.items[e.grp.items.indexOf(e)+1],mv=Math.min(e.part,need);e.part-=mv;nx.part+=mv;need-=mv}
-      /* last resort, partial payments only: a Flexible bill's last part slips to the next payday (up to 45 days past due) */
-      need=Math.min(need,Math.max(0,-(run+leftOf(c))));const nc=ch[i+1];if(need>0.005&&nc)for(const e of c.bills.filter(e=>e.grp&&e.grp.late&&e.part>0.005&&nc.date<=addDays(e.due,45)).sort((a,b)=>b.due-a.due)){if(need<=0.005)break;
-        const mv=Math.min(e.part,need),g=e.grp;let nx=g.items.find(z=>z.ci===i+1);if(!nx){nx={...e,part:0,ci:i+1,late:true};nc.bills.push(nx);g.items.push(nx)}e.part-=mv;nx.part+=mv;need-=mv}
       left=leftOf(c)}run+=left});
   G.forEach(g=>{const its=g.items.filter(e=>e.part>0.005);its.forEach((e,k)=>{e.n=its.length;e.k=k+1;e.last=k===its.length-1})});
   ch.forEach(c=>{c.bills=c.bills.filter(e=>e.part>0.005)});return s}
@@ -1349,7 +1338,7 @@ function renderPlan(){const O=planOut;
     const cd=iso(c.date),keys=[],TI={},TK=plan.ticks||{};const rec=k=>TK[k]&&typeof TK[k]==='object'&&(TK[k].t==='b'||TK[k].t==='g');
     const ck=(k,label,amt,cls,info)=>{if(rec(k))k+='+';keys.push(k);if(info)TI[k]=info;return`<label class="ckl"><input type="checkbox" data-tk="${esc(k)}"${TK[k]?' checked':''}><span class="ckn">${label}</span><span class="${cls||''}">${amt}</span></label>`};
     const done=Object.keys(TK).filter(k=>k.startsWith(cd+'|')&&rec(k)).map(k=>{keys.push(k);const v=TK[k];return`<label class="ckl"><input type="checkbox" data-tk="${esc(k)}" checked><span class="ckn">${v.t==='b'?esc(v.name)+'<small>paid '+fmtD(new Date(v.at))+'</small>':'Toward '+esc(v.name)+'<small>moved '+fmtD(new Date(v.at))+'</small>'}</span><span class="${v.t==='g'?'pos':''}">${m2(v.a)}</span></label>`}).join('');
-    const bl=into+c.bills.map(b=>ck(cd+'|b|'+b.name+'|'+iso(b.due),`${esc(b.name)} <span class="acct">${esc(acctName(b.acct))}</span><small>due ${fmtD(b.due)}${b.late?' · <span class="neg">late, no room before</span>':''}${b.n>1?' · '+(b.last?'last of '+b.n+' parts':'part '+(b.k||1)+' of '+b.n):''}</small>`,money(r2(b.part)),'',b.bid&&b.last?{t:'b',bid:b.bid,name:b.name}:null)).join('')+done;
+    const bl=into+c.bills.map(b=>ck(cd+'|b|'+b.name+'|'+iso(b.due),`${esc(b.name)} <span class="acct">${esc(acctName(b.acct))}</span><small>due ${fmtD(b.due)}${b.n>1?' · '+(b.last?'last of '+b.n+' parts':'part '+(b.k||1)+' of '+b.n):''}</small>`,money(r2(b.part)),'',b.bid&&b.last?{t:'b',bid:b.bid,name:b.name}:null)).join('')+done;
     el.innerHTML=`<div class="chq-h"><span class="ic">$</span><div class="nm"><b>${fmtD(c.date)}${c.date.getFullYear()!==t0.getFullYear()?' '+c.date.getFullYear():''} · ${esc(c.who)}</b><small>${c.short?'<span class="neg">short '+money(Math.round(c.short))+'</span>':tg?'to goals '+money(Math.round(tg)):'extra '+money(Math.round(Math.max(0,c.extra)))}</small></div><div class="amt pos">${c.est?'~':''}${money(c.amount)}</div></div>
       <div class="chq-b"><button class="lnkbtn" data-payamt="${c.iid}|${iso(c.date)}">${c.est?(c.shi?'Estimated from '+shiftTxt(c.shi)+' · set the real amount':'Estimated from your last cheques · set the real amount'):'Change this cheque\'s amount'}</button>${bl||'<div class="ln"><span>No bills set aside from this cheque</span><span></span></div>'}<div class="ln"><span>Everyday spending · ${c.days} days</span><span>${money(Math.round(c.spend))}</span></div>
       ${c.goals.map(x=>x.type==='save'?ck(cd+'|g|'+x.name,`Toward ${esc(x.name)}<small>Goal: ${m2(x.target)}</small>`,`${m2(x.give)} / ${m2(x.after)}`,'pos',{t:'g',gid:x.gid,name:x.name,a:r2(x.give)})
@@ -1359,23 +1348,9 @@ function renderPlan(){const O=planOut;
       ${Math.round(c.carry-plan.cushion)>0?`<div class="ln t sur"><span>Surplus</span><span class="lime">${money(Math.round(c.carry-plan.cushion))}</span></div>`:''}</div>`;
     const sm=el.querySelector('.chq-h small');const base=sm.innerHTML;const upd=()=>{const n=keys.filter(k=>plan.ticks&&plan.ticks[k]).length;sm.innerHTML=(keys.length&&n?`<span class="lime">${n} of ${keys.length} ticked</span> · `:'')+base};upd();
     el.querySelectorAll('[data-tk]').forEach(x=>x.onchange=()=>{const k=x.dataset.tk,keep=document.querySelector('.chq.open')?[...chqList.children].indexOf(el):-1;if(tickSet(k,x.checked,TI[k])){savePlan();renderPlan();reopenChq(keep);renderSafe();renderPlanSettings()}else{x.checked=!!(plan.ticks&&plan.ticks[k]);upd()}});
-    if(!shown&&(!L.children.length))el.classList.add('open');
+    if(!shown&&!L.children.length)el.classList.add('open');
     {const pb=el.querySelector('[data-payamt]');if(pb)pb.onclick=e=>{e.stopPropagation();const [i,k]=pb.dataset.payamt.split('|');openPayAmt(i,k,false)}}
     el.querySelector('.chq-h').onclick=()=>el.classList.toggle('open');L.appendChild(el)});shown+=n;chqMore.style.display=shown>=all.length?'none':''};
-  {const P=curPeriod();if(P&&(!all.length||all[0].date>P.start)){const el=document.createElement('div');el.className='chq open nowchq';const cd=iso(P.start),keys=[],TK=plan.ticks||{},TI={};
-    const end=P.next?addDays(P.next,-1):addDays(t0,6),amt=P.who.reduce((a,x)=>a+payAmt(x,P.start),0);
-    const due=bills.filter(b=>b.due&&b.due>=cd&&parse(b.due)<=end).sort((a,b)=>a.due<b.due?-1:1);
-    const rows=due.map(b=>{const k=cd+'|b|'+b.name+'|'+b.due;keys.push(k);TI[k]={t:'b',bid:b.id,name:b.name};const late=parse(b.due)<t0;
-      return`<label class="ckl"><input type="checkbox" data-tk="${esc(k)}"><span class="ckn">${esc(b.name)} <span class="acct">${esc(acctName(acctOf(b)))}</span><small>${late?'<span class="neg">was due '+fmtD(parse(b.due))+'</span>':'due '+fmtD(parse(b.due))}</small></span><span>${b.variable?'~':''}${money(b.amount)}</span></label>`}).join('');
-    const done=Object.keys(TK).filter(k=>k.startsWith(cd+'|')&&TK[k]&&typeof TK[k]==='object'&&(TK[k].t==='b'||TK[k].t==='g')).map(k=>{keys.push(k);const v=TK[k];
-      return`<label class="ckl"><input type="checkbox" data-tk="${esc(k)}" checked><span class="ckn">${v.t==='b'?esc(v.name)+'<small>paid '+fmtD(new Date(v.at))+'</small>':'Toward '+esc(v.name)+'<small>moved '+fmtD(new Date(v.at))+'</small>'}</span><span>${m2(v.a)}</span></label>`}).join('');
-    const sp=periodSpendRows(P.start,end),spent=sp.reduce((a,r)=>a+r.sp,0),left=P.next?Math.max(0,spendPerDay()*Math.max(0,Math.round((P.next-t0)/864e5))):0;
-    el.innerHTML=`<div class="chq-h"><span class="ic">$</span><div class="nm"><b>${fmtD(P.start)} · ${esc(P.who.map(x=>x.name).join(' + '))}</b><small><span class="lime">This pay</span>${P.next?' · until '+fmtD(P.next):''}</small></div><div class="amt pos">${money(amt)}</div></div>
-      <div class="chq-b"><div class="ln"><span>Already in your bank balance</span><span></span></div>${rows||done?'<div class="ln t"><span>Bills this pay</span><span></span></div>'+rows+done:'<div class="ln"><span>No bills left this pay</span><span></span></div>'}
-      <div class="ln t"><span>Spent so far this pay</span><span>${money(Math.round(spent))}</span></div>${spendBars(sp)}
-      ${P.next?`<div class="ln"><span>Everyday spending until ${fmtD(P.next)}</span><span>${money(Math.round(left))}</span></div>`:''}</div>`;
-    el.querySelectorAll('[data-tk]').forEach(x=>x.onchange=()=>{const k=x.dataset.tk;if(tickSet(k,x.checked,TI[k])){savePlan();renderPlan();renderSafe();renderPlanSettings()}else x.checked=!!(plan.ticks&&plan.ticks[k])});
-    el.querySelector('.chq-h').onclick=()=>el.classList.toggle('open');chqList.appendChild(el)}}
   add(8);chqMore.onclick=()=>add(8)}
 
 /* ticking in the payday checklist: a bill's last part = paid; a goal = money moved */
@@ -1388,16 +1363,6 @@ function tickSet(k,on,info){plan.ticks=plan.ticks||{};const cur=plan.ticks[k];
   if(cur&&cur.t==='b'){if(hist.some(h=>h.id===cur.hid)){undoHist(cur.hid);if(hist.some(h=>h.id===cur.hid))return false}delete plan.ticks[k];return true}
   if(cur&&cur.t==='g'){goalApply(cur.gid,-cur.a);delete plan.ticks[k];return true}
   delete plan.ticks[k];return true}
-/* pay periods: from one payday (any income) up to the day before the next */
-function payDays(a,b){const m=new Map();income.forEach(x=>incOccCal(x,a,b).forEach(d=>{if(d>=a&&d<=b){const k=iso(d);if(!m.has(k))m.set(k,[]);m.get(k).push(x)}}));return[...m.keys()].sort().map(k=>({d:parse(k),who:m.get(k)}))}
-function curPeriod(){const t=today(),back=payDays(addDays(t,-70),t);if(!back.length)return null;const fwd=payDays(addDays(t,1),addDays(t,70)),p=back[back.length-1];
-  return{start:p.d,who:p.who,next:fwd.length?fwd[0].d:null}}
-function spendIn(a,b){const A=iso(a),B=iso(b),by={};(plan.log||[]).forEach(l=>{if(l.date>=A&&l.date<=B)by[l.item]=(by[l.item]||0)+l.amount});return by}
-function periodSpendRows(a,b){const by=spendIn(a,b),days=Math.max(1,Math.round((b-a)/864e5)+1),rows=[];
-  plan.spend.forEach(x=>{const allow=x.per==='week'?x.amount/7*days:x.amount*12/365*days;let sp=by[x.id]||0;delete by[x.id];rows.push({name:x.name,sp,allow})});
-  const other=Object.values(by).reduce((a,v)=>a+v,0);if(other>0.005)rows.push({name:'Other',sp:other,allow:0});return rows}
-function spendBars(rows){const mx=Math.max(1,...rows.map(r=>Math.max(r.sp,r.allow)));return rows.map(r=>{const over=r.allow>0&&r.sp>r.allow+0.005;
-  return`<div class="pbrow"><div class="cusl"><span>${esc(r.name)}</span><span class="${over?'neg':''}">${money(Math.round(r.sp))}${r.allow>0?' of '+money(Math.round(r.allow)):''}</span></div><div class="pbar"><i style="width:${Math.min(100,r.sp/mx*100)}%;background:${over?'var(--red)':'#1D9E75'}"></i>${r.allow>0?`<em style="left:${Math.min(100,r.allow/mx*100)}%"></em>`:''}</div></div>`}).join('')}
 function reopenChq(i){if(i>=0&&chqList.children[i])chqList.children[i].classList.add('open')}
 function goalCard(g,R,sub,foot){const s=R.st[g.id],t0=R.t0,save=g.type==='save';
   let ik=save?(guessIcon(g.name)||'savings'):(g.fromBill&&(bills.find(b=>b.id===g.fromBill)||{}).icon)||guessIcon(g.name)||'ccard';if(!BI[ik])ik=save?'savings':'ccard';
@@ -1425,7 +1390,7 @@ function chartSvg(R){const W=340,Hh=150,pl=34,pr=8,pt=10,pb=22;let end=R.t0;
   AG.forEach((gl,i)=>{const pts=R.st[gl.id].track.filter(p=>p[0]<=end).map(p=>X(p[0]).toFixed(1)+','+Y(p[1]).toFixed(1)).join(' ');g+=`<polyline points="${pts}" fill="none" stroke="${COLORS[i%COLORS.length]}" stroke-width="2.5" stroke-linejoin="round"/>`});
   return`<div class="pcard"><p><b>Progress toward goals</b></p><svg viewBox="0 0 ${W} ${Hh}" width="100%" style="color:var(--text);display:block">${g}</svg><div class="leg">${AG.map((gl,i)=>`<span><i style="background:${COLORS[i%COLORS.length]}"></i>${esc(gl.name)}</span>`).join('')}</div></div>`}
 
-function renderPlanSettings(){renderAccts();pModeNote.textContent=(plan.payMode||'split')==='full'?'Each bill comes from the payday just before it\'s due, except Flexible bills you\'ve set to split.':'Bills are paid by how important they are. Must pay comes out in full from the payday before it\'s due. Important is split over the 2 paydays before. Flexible is spread over every payday before, and only slips past its due date if there\'s no other way. Switch to pay in full and your own bill settings come back.';pBankVal.textContent=plan.bankAt||plan.bank?m2(bankNow()):'Not set';pBankNote.textContent=bankNote();pCush.value=plan.cushion;pMode.value=plan.payMode||'split';
+function renderPlanSettings(){renderAccts();pModeNote.textContent=(plan.payMode||'split')==='full'?'Each bill comes from the payday just before it\'s due, except Flexible bills you\'ve set to split.':'Your whole budget: every bill is split across the paydays before it\'s due, so it\'s still paid on time. Switch to pay in full and your own bill settings come back.';pBankVal.textContent=plan.bankAt||plan.bank?m2(bankNow()):'Not set';pBankNote.textContent=bankNote();pCush.value=plan.cushion;pMode.value=plan.payMode||'split';
   spList.innerHTML=plan.spend.length?plan.spend.map(x=>`<div class="row" data-id="${x.id}"><div class="nm"><b>${esc(x.name)}</b></div><div class="amt">${money(x.amount)}<small class="muted">per ${x.per}</small></div></div>`).join('')+`<div class="row" style="cursor:default"><div class="nm"><b>Total</b></div><div class="amt">${money(Math.round(spendPerWeek()))}<small class="muted">per week</small></div></div>`
     :'<div class="empty">Add groceries, gas, kids, fun money and anything else you spend on regularly.</div>';
   spList.querySelectorAll('.row[data-id]').forEach(r=>r.onclick=()=>openSp(r.dataset.id));
@@ -1791,23 +1756,7 @@ function renderIns(){if(vIns.hidden)return;const t0=today();if(!insD)insD=new Da
   if(O.tot>0){const r=50,C=2*Math.PI*r;let st=0,circ='';O.cats.forEach(c=>{const L=c.amt/O.tot*C;circ+=`<circle cx="70" cy="70" r="${r}" fill="none" stroke="${c.col}" stroke-width="18" stroke-dasharray="${Math.max(L-(O.cats.length>1?2.5:0),.5).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-st).toFixed(2)}" transform="rotate(-90 70 70)"/>`;st+=L});
     h+=`<div class="pcard"><h4>Where it went</h4><div class="ring"><div class="rsvg"><svg viewBox="0 0 140 140" role="img" aria-label="Spending by category">${circ}</svg><div class="rmid"><b>${cm(O.tot)}</b><small>spent</small></div></div><div class="rleg">`+
       O.cats.slice(0,8).map(c=>`<div><i style="background:${c.col}"></i><span>${esc(c.lab)}</span><b>${money(Math.round(c.amt))}</b><small>${Math.round(c.amt/O.tot*100)}%</small></div>`).join('')+`</div></div></div>`}
-  insBody.innerHTML=h+pastHTML();pastWire();window.__insRows=[...I.rows,...O.rows].sort((a,b)=>a[0]<b[0]?-1:1);window.__insLab=lab}
-/* previous pay periods: one tab each, with bills that may not have been paid and a spending graph */
-function pastPeriods(){const t=today();if(!plan.pastFrom){const P=curPeriod();plan.pastFrom=iso(P?P.start:t);savePlan()}
-  const ps=payDays(parse(plan.pastFrom),t),out=[],del=new Set(plan.pastDel||[]);
-  for(let i=0;i<ps.length-1;i++){const a=ps[i].d,nx=ps[i+1].d;if(nx>t)break;if(!del.has(iso(a)))out.push({start:a,end:addDays(nx,-1),next:nx,who:ps[i].who})}return out.reverse()}
-function pastHTML(){const L=pastPeriods(),t=today();let h='<div class="sec noprint" style="margin-top:22px">Previous pay periods</div>';
-  if(!L.length)return h+'<div class="pcard noprint"><p class="muted" style="margin:0">Previous pay periods will appear here. Each one shows bills that might not have been paid and a graph of what you spent.</p></div>';
-  return h+L.map(p=>{const A=iso(p.start),B=iso(p.end),open=bills.filter(b=>b.due&&b.due>=A&&b.due<=B&&parse(b.due)<t),paid=hist.filter(x=>x.type==='paid'&&x.due>=A&&x.due<=B),rows=periodSpendRows(p.start,p.end),spent=rows.reduce((a,r)=>a+r.sp,0);
-    return`<div class="chq pastp noprint" data-past="${A}"><div class="chq-h"><span class="ic">$</span><div class="nm"><b>${fmtD(p.start)} – ${fmtD(p.end)} · ${esc(p.who.map(x=>x.name).join(' + '))}</b><small>${open.length?`<span class="neg">${open.length} bill${open.length>1?'s':''} may not be paid</span> · `:''}spent ${money(Math.round(spent))}</small></div><button type="button" class="pastx" data-pdel="${A}" aria-label="Delete this pay period">×</button></div>
-      <div class="chq-b"><div class="ln t"><span>Bills due this pay</span><span></span></div>${open.map(b=>`<label class="ckl"><input type="checkbox" data-ppay="${b.id}"><span class="ckn">${esc(b.name)}<small class="neg">was due ${fmtD(parse(b.due))}, not marked paid</small></span><span>${b.variable?'~':''}${money(b.amount)}</span></label>`).join('')}
-      ${paid.map(x=>`<label class="ckl"><input type="checkbox" checked data-pundo="${x.id}"><span class="ckn">${esc(x.name)}<small>paid ${fmtD(parse(x.on))}</small></span><span>${money(x.amount)}</span></label>`).join('')}${!open.length&&!paid.length?'<div class="ln"><span>No bills were due</span><span></span></div>':''}
-      <div class="ln t"><span>Spending</span><span>${money(Math.round(spent))}</span></div>${rows.length?spendBars(rows):'<div class="ln"><span>Nothing logged</span><span></span></div>'}</div></div>`}).join('')}
-function pastWire(){insBody.querySelectorAll('.pastp .chq-h').forEach(h=>h.onclick=e=>{if(e.target.closest('.pastx'))return;h.parentElement.classList.toggle('open')});
-  insBody.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=e=>{e.stopPropagation();if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Delete?';b.classList.add('sure');setTimeout(()=>{if(b.isConnected){b.dataset.sure='';b.textContent='×';b.classList.remove('sure')}},3500);return}
-    plan.pastDel=[...new Set([...(plan.pastDel||[]),b.dataset.pdel])];savePlan();renderIns();toast('Pay period removed from Insights')});
-  insBody.querySelectorAll('[data-ppay]').forEach(x=>x.onchange=()=>{const b=bills.find(z=>z.id===x.dataset.ppay);if(b&&x.checked){settle(b,'paid',b.amount);renderIns()}});
-  insBody.querySelectorAll('[data-pundo]').forEach(x=>x.onchange=()=>{if(!x.checked){undoHist(x.dataset.pundo);renderIns()}})}
+  insBody.innerHTML=h;window.__insRows=[...I.rows,...O.rows].sort((a,b)=>a[0]<b[0]?-1:1);window.__insLab=lab}
 document.querySelectorAll('[data-ip]').forEach(b=>b.onclick=()=>{insP=b.dataset.ip;renderIns()});
 insPrev.onclick=()=>{insD=insP==='year'?new Date(insD.getFullYear()-1,insD.getMonth(),1):new Date(insD.getFullYear(),insD.getMonth()-1,1);renderIns()};
 insNext.onclick=()=>{const t0=today(),n=insP==='year'?new Date(insD.getFullYear()+1,insD.getMonth(),1):new Date(insD.getFullYear(),insD.getMonth()+1,1);if(n>t0)return;insD=n;renderIns()};
