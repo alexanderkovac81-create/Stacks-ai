@@ -137,6 +137,8 @@ textarea{width:100%;min-height:90px;font:12px ui-monospace,monospace;padding:10p
 .ln span:first-child{color:var(--muted)}
 .ln.t{font-weight:600}.ln.t span:first-child{color:var(--text)}
 .leg{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;margin-top:6px}.leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+#pModeRow{display:block}#pModeRow select{width:100%;margin-top:10px}
+.bkbox{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}.bkbox b{font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}.bkbox .btn{width:auto;flex:none;padding:7px 16px;margin:0}
 .upb{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;width:34px;height:34px;font-size:16px;cursor:pointer;flex:none}
 .grp-h{display:flex;justify-content:space-between;align-items:baseline;margin:14px 4px 6px;font-size:13px;font-weight:600;color:var(--muted)}
 .grp-h:first-child{margin-top:4px}
@@ -494,9 +496,9 @@ window.__introSkip=finish})();</script>
     <div class="sum"><span>Coming in next 30 days</span><b id="inc30">$0</b></div>
     <div class="sec">Plan settings</div>
     <div class="card">
-      <div class="set"><div class="nm"><b>Money in the bank now</b><small id="pBankNote">What's in your account today. After that, Stacks keeps it up to date.</small></div><input id="pBank" type="number" inputmode="decimal" step="0.01" placeholder="0"></div>
-      <div class="set"><div class="nm"><b>Paying bills</b><small>Split each bill into partial payments from the cheques before it's due, or pay it in full from the cheque just before it's due</small></div>
-        <select id="pMode"><option value="split">Partial payments</option><option value="full">Pay in full, on time</option></select></div>
+      <div class="set"><div class="nm"><b>Current bank balance</b><small id="pBankNote"></small></div><div class="bkbox"><b id="pBankVal">$0.00</b><button type="button" class="btn" id="pBankUpd">Update</button></div></div>
+      <div class="set" id="pModeRow"><div class="nm"><b>Paying bills</b><small id="pModeNote"></small></div>
+        <select id="pMode"><option value="split">Partial payments, on time</option><option value="full">Pay in full, on time</option></select></div>
       <div class="set"><div class="nm"><b>Keep a cushion of</b><small>The plan never counts on going below this</small></div><input id="pCush" type="number" inputmode="decimal" step="1" placeholder="200"></div>
     </div>
     <div class="sec">Accounts</div>
@@ -637,6 +639,8 @@ window.__introSkip=finish})();</script>
   <div id="fNewAcctW" style="display:none"><label class="f">New account name</label><input id="fNewAcct" placeholder="Bills account"></div>
   <label class="f">Priority</label>
   <select id="fPri"><option value="must">Must pay (rent, power, insurance, loans)</option><option value="important">Important</option><option value="flex">Flexible (can wait a little)</option></select>
+  <div id="fSplitW" hidden><label class="f" for="fSplit">Split it across</label><select id="fSplit"><option value="0">Don't split, pay it from one cheque</option><option value="2">2 cheques</option><option value="3">3 cheques</option><option value="4">4 cheques</option><option value="all">Every payday until it's due</option></select>
+    <div class="hint" id="fSplitHint"></div></div>
   <div id="debtBox">
     <div class="two">
       <div><label class="f">Balance owing ($)</label><input id="fBal" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Optional"></div>
@@ -779,7 +783,7 @@ window.__introSkip=finish})();</script>
 </div></div>
 
 <div class="sheet-bg" id="bankBg"><div class="sheet">
-  <h3>Money in the bank now</h3>
+  <h3>Current bank balance</h3>
   <p class="muted" style="font-size:14px;margin:0">Your chequing and spending accounts as of right now. Leave out savings that belong to a goal.</p>
   <label class="f">Balance ($)</label><input id="bkIn" type="number" inputmode="decimal" step="0.01">
   <div class="set" id="bkIncRow" style="border:0;padding:10px 0 0"><div class="nm"><b>This includes today's pay</b><small>Turn off if it hasn't landed yet</small></div><label class="tg"><input type="checkbox" id="bkInc" checked><span></span></label></div>
@@ -1144,6 +1148,11 @@ function syncForm(){const debt=fCat.value==='debt';modeWrap.style.display=debt?'
     fHint.innerHTML=t;return}
   fHint.textContent=lim?(fCnt.value==='1'?'One-time bill. It clears for good once paid.':`Repeats every ${f}, ${fCnt.value} payments, then clears for good.`):`Same amount every ${f}, forever. Paying it starts the next one.`}
 fMode.onchange=fFreq.onchange=fCnt.onchange=syncForm;
+function paysBefore(due,freq){const d=parse(due),prev=addDays(d,-Math.round(fq(freq).d));let n=0;income.forEach(x=>incOccCal(x,addDays(prev,1),d).forEach(o=>{if(o>prev&&o<=d)n++}));return n}
+function syncSplit(){const on=fPri.value==='flex';fSplitW.hidden=!on;if(!on)return;let h='Parts come out of the paydays before it\'s due, so it\'s still paid on time.';
+  if(fDue.value){const n=paysBefore(fDue.value,fFreq.value);if(n)h=`About ${n} payday${n>1?'s':''} land before each due date for this bill. `+h}
+  if(plan.payMode!=='full')h+=' Right now Paying bills is set to partial payments, so every bill is already split. This kicks in if you switch to pay in full.';fSplitHint.textContent=h}
+fPri.addEventListener('change',syncSplit);fFreq.addEventListener('change',syncSplit);fDue.addEventListener('change',syncSplit);
 [fBal,fApr,fLeft,fAmt,fDue].forEach(i=>i.addEventListener('input',syncForm));fIncl.onchange=fGoal.onchange=syncForm;let inclTouched=false;fIncl.addEventListener('change',()=>inclTouched=true);
 [fName,fAmt,fDue].forEach(i=>i.oninput=()=>fErr.textContent='');
 fName.addEventListener('input',()=>{if(!catTouched)fCat.value=guessCat(fName.value);if(!inclTouched)fIncl.checked=!/card|visa|master|amex|credit|line of credit|\bloc\b/i.test(fName.value);syncForm()});fCat.onchange=()=>{catTouched=true;syncForm()};
@@ -1151,12 +1160,12 @@ fName.addEventListener('input',()=>{if(!catTouched)fCat.value=guessCat(fName.val
 function openEdit(id){editId=id||null;const b=bills.find(x=>x.id===id);edTitle.textContent=b?'Edit bill':'Add bill';delBar.style.display=b?'flex':'none';
   fName.value=b?b.name:'';fCat.value=b?catOf(b):'living';catTouched=!!b;fAmt.value=b?b.amount:'';fDue.value=b?b.due:iso(today());selColor=b?b.color:COLORS[bills.length%COLORS.length];
   edIcon={icon:b&&b.icon||'',img:b&&b.img||'',icol:b&&b.icon&&!b.img&&b.icol||''};iconTouched=!!b;showIconPrev();
-  fillAcct(b?acctOf(b):accts()[0].id);fVar.checked=!!(b&&b.variable);fPri.value=b&&b.pri?b.pri:'must';fBal.value=b&&b.balance?b.balance:'';fApr.value=b&&b.apr?b.apr:'';fIncl.checked=b?!!b.intIncl:true;inclTouched=!!b;fLeft.value=b&&catOf(b)==='debt'&&b.mode==='limited'?b.remaining:'';fGoal.checked=!!(b&&b.goal);fMode.value=b?b.mode:'ongoing';fFreq.value=b?b.freq:'monthly';fCnt.value=b&&b.mode==='limited'?b.remaining:1;fErr.textContent='';drawSw();syncForm();editBg.classList.add('on')}
+  fillAcct(b?acctOf(b):accts()[0].id);fVar.checked=!!(b&&b.variable);fPri.value=b&&b.pri?b.pri:'must';fSplit.value=b&&b.split?String(b.split):'0';fBal.value=b&&b.balance?b.balance:'';fApr.value=b&&b.apr?b.apr:'';fIncl.checked=b?!!b.intIncl:true;inclTouched=!!b;fLeft.value=b&&catOf(b)==='debt'&&b.mode==='limited'?b.remaining:'';fGoal.checked=!!(b&&b.goal);fMode.value=b?b.mode:'ongoing';fFreq.value=b?b.freq:'monthly';fCnt.value=b&&b.mode==='limited'?b.remaining:1;fErr.textContent='';drawSw();syncForm();syncSplit();editBg.classList.add('on')}
 addBtn.onclick=()=>openEdit();addTop.onclick=()=>openEdit();edCancel.onclick=()=>editBg.classList.remove('on');
 edSave.onclick=()=>{const n=fName.value.trim(),a=parseFloat(fAmt.value);
   if(!n){fErr.textContent='Enter a name';return}if(!(a>=0)||fAmt.value===''){fErr.textContent='Enter an amount';return}if(!fDue.value){fErr.textContent='Pick a due date';return}
   let acct=fAcct.value;if(acct==='__new'){const nm=fNewAcct.value.trim();if(!nm){fErr.textContent='Name the new account';return}acct=uid();plan.accounts=accts();plan.accounts.push({id:acct,name:nm});savePlan()}
-  const data={icon:edIcon.icon||'',img:edIcon.img||'',icol:edIcon.icon&&!edIcon.img&&edIcon.icol||'',acct,name:n,variable:fVar.checked,amount:Math.round(a*100)/100,color:selColor,pri:fPri.value,cat:fCat.value,due:fDue.value,anchor:parse(fDue.value).getDate(),mode:fMode.value,freq:fFreq.value,remaining:fMode.value==='limited'?+fCnt.value:0,goal:false};
+  const data={icon:edIcon.icon||'',img:edIcon.img||'',icol:edIcon.icon&&!edIcon.img&&edIcon.icol||'',acct,name:n,variable:fVar.checked,amount:Math.round(a*100)/100,color:selColor,pri:fPri.value,split:fSplit.value==='all'?'all':(+fSplit.value||0),cat:fCat.value,due:fDue.value,anchor:parse(fDue.value).getDate(),mode:fMode.value,freq:fFreq.value,remaining:fMode.value==='limited'?+fCnt.value:0,goal:false};
   if(fCat.value==='debt'){const d=formDebt();if(fLeft.value!==''&&!(d.remaining>=1)){fErr.textContent='Payments left must be 1 or more';return}
     if(fGoal.checked&&!(d.balance>0)&&d.mode!=='limited'){fErr.textContent='To make this a goal, enter the balance owing or the payments left';return}
     Object.assign(data,{mode:d.mode,remaining:d.remaining,balance:Math.round(d.balance*100)/100,apr:d.apr,intIncl:d.intIncl,goal:fGoal.checked})}
@@ -1229,15 +1238,15 @@ function buildCheques(t0,H){const spd=spendPerDay(),f0=skipToday()?addDays(t0,1)
   if(WI&&WI.inc){const cpy=Math.max(1,ch.filter(c=>c.date<addDays(t0,365)).length);ch.forEach(c=>c.amount+=WI.inc*12/cpy)}
   ch.forEach((c,i)=>{c.days=i<ch.length-1?Math.max(0,Math.round((ch[i+1].date-c.date)/864e5)):7;c.spend=spd*c.days;c.bills=[]});return ch}
 function buildOccs(t0,H,cut){const occs=[];const gb=new Set(AG.filter(g=>g.fromBill).map(g=>g.fromBill));
-  bills.filter(b=>!gb.has(b.id)).forEach(b=>{let prev=addDays(t0,-1);const rec=!(b.mode==='limited'&&b.remaining<=1);billOcc(b,null,H).forEach(d=>{occs.push({acct:acctOf(b),name:b.name,amount:b.amount,date:d,prev,pri:b.pri||'must',freq:b.freq,first:rec&&d>=t0&&prev<t0,bid:b.id});if(d>=t0)prev=d})});
+  bills.filter(b=>!gb.has(b.id)).forEach(b=>{let prev=addDays(t0,-1);const rec=!(b.mode==='limited'&&b.remaining<=1);billOcc(b,null,H).forEach(d=>{occs.push({acct:acctOf(b),name:b.name,amount:b.amount,date:d,prev,pri:b.pri||'must',freq:b.freq,first:rec&&d>=t0&&prev<t0,bid:b.id,split:b.pri==='flex'&&b.split?b.split:0});if(d>=t0)prev=d})});
   AG.filter(g=>g.type==='debt').forEach(g=>{let prev=addDays(t0,-1);const c=cut[g.id]||H;debtDates(g,H).forEach(d=>{if(d<=c){occs.push({acct:g.fromBill?acctOf(bills.find(x=>x.id===g.fromBill)||{}):accts()[0].id,name:g.fromBill?g.name:g.name+' minimum',amount:g.min,date:d,prev,pri:'must',debt:g.id,freq:g.freq||'monthly',first:prev<t0,bid:g.fromBill||null});prev=d}})});
   if(WI&&WI.buy>0&&WI.date)occs.push({name:'What-if purchase',amount:WI.buy,date:parse(WI.date),prev:addDays(t0,-1),pri:'must'});
   return occs}
 function lastIdx(ch,d){let lo=0,hi=ch.length-1,r=-1;while(lo<=hi){const m=(lo+hi)>>1;if(ch[m].date<=d){r=m;lo=m+1}else hi=m-1}return r}
 function fund(ch,occs,t0,mode){let bank=0;
-  occs.forEach(o=>{if(o.date<t0){bank+=o.amount;return}let idx=[],amt=o.amount;
-    if(mode==='spread'){const j=lastIdx(ch,o.date);for(let i=j;i>=0&&ch[i].date>o.prev;i--)idx.push(i);
-      if(o.first&&idx.length&&fq(o.freq).d<=31){const p0=addDays(o.date,-Math.round(fq(o.freq).d));const f=Math.min(1,Math.max(0,(t0-p0)/(o.date-p0)));const saved=o.amount*f;bank+=saved;amt-=saved}}
+  occs.forEach(o=>{if(o.date<t0){bank+=o.amount;return}let idx=[],amt=o.amount;const sp=mode==='spread'||o.split==='all'?Infinity:(+o.split||0);
+    if(sp>1){const j=lastIdx(ch,o.date);for(let i=j;i>=0&&ch[i].date>o.prev&&idx.length<sp;i--)idx.push(i);
+      if(mode==='spread'&&o.first&&idx.length&&fq(o.freq).d<=31){const p0=addDays(o.date,-Math.round(fq(o.freq).d));const f=Math.min(1,Math.max(0,(t0-p0)/(o.date-p0)));const saved=o.amount*f;bank+=saved;amt-=saved}}
     if(!idx.length){const j=lastIdx(ch,o.date);if(j<0){bank+=amt;return}idx=[j]}
     const part=amt/idx.length;idx.forEach(i=>ch[i].bills.push({acct:o.acct,name:o.name,part,due:o.date,full:o.amount,pri:o.pri,n:idx.length,bid:o.bid||null,last:i===idx[0]}))});
   return bank}
@@ -1280,7 +1289,7 @@ function renderPlan(){const O=planOut;
   if(!income.length){O.innerHTML='<div class="pcard"><h4>Add your income first</h4><p class="muted">The plan works cheque by cheque, so it needs your paydays. Add them under Your numbers.</p><div class="bar"><button class="btn pri" id="goSet">Add income</button></div></div>';goSet.onclick=()=>planTab('inp');return}
   const R=runPlan(),t0=R.t0;let h='';
   if(plan.ticks){const cut=iso(addDays(t0,-60));let ch=false;for(const k in plan.ticks){const v=plan.ticks[k];if(k.slice(0,10)<cut||(v&&v.t==='b'&&!hist.some(h=>h.id===v.hid))){delete plan.ticks[k];ch=true}}if(ch)savePlan()}
-  h+=`<div class="pcard"><p><b>Starting point</b></p><p class="muted">In the bank ${money(Math.round(bankNow()))} · cushion ${money(plan.cushion)} · everyday spending ${money(Math.round(spendPerWeek()))}/week · bills ${plan.payMode==='full'?'paid in full, on time':'split into partial payments'}</p><p class="muted">Per month: ${(()=>{const t={debt:0,util:0,living:0};bills.forEach(b=>t[catOf(b)]+=perMonth(b));plan.goals.forEach(g=>{if(g.type==='debt')t.debt+=g.min});t.living+=spendPerDay()*365/12;return CATS.map(([k,l])=>l+' '+money(Math.round(t[k]))).join(' · ')})()}</p>${!plan.spend.length?'<p>No everyday spending added yet. Add groceries, gas and so on under Your numbers, or the plan will think that money is free.</p>':''}</div>`;
+  h+=`<div class="pcard"><p><b>Starting point</b></p><p class="muted">Bank balance ${money(Math.round(bankNow()))} · cushion ${money(plan.cushion)} · everyday spending ${money(Math.round(spendPerWeek()))}/week · bills ${plan.payMode==='full'?'paid in full, on time':'split into partial payments'}</p><p class="muted">Per month: ${(()=>{const t={debt:0,util:0,living:0};bills.forEach(b=>t[catOf(b)]+=perMonth(b));plan.goals.forEach(g=>{if(g.type==='debt')t.debt+=g.min});t.living+=spendPerDay()*365/12;return CATS.map(([k,l])=>l+' '+money(Math.round(t[k]))).join(' · ')})()}</p>${!plan.spend.length?'<p>No everyday spending added yet. Add groceries, gas and so on under Your numbers, or the plan will think that money is free.</p>':''}</div>`;
   if(R.startShort>0)h+=`<div class="pcard warn"><h4 class="neg">Short before the next payday</h4><p>Bills due before your next cheque, plus spending until then, add up to ${money(Math.round(plan.bank+R.startShort))}. You have ${money(plan.bank)} in the bank, so you're short <b class="neg">${money(Math.round(R.startShort))}</b>. Check that "Money in the bank now" under Your numbers is up to date.</p></div>`;
   if(!AG.length)h+='<div class="pcard"><h4>No goals yet</h4><p class="muted">Add a goal under Your numbers, like saving for a holiday or paying off a credit card. The plan will then show the fastest safe way to get there, cheque by cheque.</p></div>';
   AG.forEach((g,gi)=>{const s=R.st[g.id];const pct=Math.round(prog(g,g.type==='save'?s.saved:s.bal)*100);const col=COLORS[gi%COLORS.length];let line='';
@@ -1368,7 +1377,7 @@ function chartSvg(R){const W=340,Hh=150,pl=34,pr=8,pt=10,pb=22;let end=R.t0;
   AG.forEach((gl,i)=>{const pts=R.st[gl.id].track.filter(p=>p[0]<=end).map(p=>X(p[0]).toFixed(1)+','+Y(p[1]).toFixed(1)).join(' ');g+=`<polyline points="${pts}" fill="none" stroke="${COLORS[i%COLORS.length]}" stroke-width="2.5" stroke-linejoin="round"/>`});
   return`<div class="pcard"><p><b>Progress toward goals</b></p><svg viewBox="0 0 ${W} ${Hh}" width="100%" style="color:var(--text);display:block">${g}</svg><div class="leg">${AG.map((gl,i)=>`<span><i style="background:${COLORS[i%COLORS.length]}"></i>${esc(gl.name)}</span>`).join('')}</div></div>`}
 
-function renderPlanSettings(){renderAccts();pBank.value=plan.bankAt||plan.bank?bankNow().toFixed(2):'';pBankNote.textContent=bankNote();pCush.value=plan.cushion;pMode.value=plan.payMode||'split';
+function renderPlanSettings(){renderAccts();pModeNote.textContent=(plan.payMode||'split')==='full'?'Each bill comes from the payday just before it\'s due, except Flexible bills you\'ve set to split.':'Your whole budget: every bill is split across the paydays before it\'s due, so it\'s still paid on time. Switch to pay in full and your own bill settings come back.';pBankVal.textContent=plan.bankAt||plan.bank?m2(bankNow()):'Not set';pBankNote.textContent=bankNote();pCush.value=plan.cushion;pMode.value=plan.payMode||'split';
   spList.innerHTML=plan.spend.length?plan.spend.map(x=>`<div class="row" data-id="${x.id}"><div class="nm"><b>${esc(x.name)}</b></div><div class="amt">${money(x.amount)}<small class="muted">per ${x.per}</small></div></div>`).join('')+`<div class="row" style="cursor:default"><div class="nm"><b>Total</b></div><div class="amt">${money(Math.round(spendPerWeek()))}<small class="muted">per week</small></div></div>`
     :'<div class="empty">Add groceries, gas, kids, fun money and anything else you spend on regularly.</div>';
   spList.querySelectorAll('.row[data-id]').forEach(r=>r.onclick=()=>openSp(r.dataset.id));
@@ -1377,8 +1386,8 @@ function renderPlanSettings(){renderAccts();pBank.value=plan.bankAt||plan.bank?b
     :'<div class="empty">Add a goal, like a holiday fund or paying off a credit card.</div>';
   glList.querySelectorAll('.row[data-id]').forEach(r=>r.onclick=()=>{const id=r.dataset.id;if(id.startsWith('bill:'))openEdit(id.slice(5));else openGl(id)});
   glList.querySelectorAll('[data-up]').forEach(b=>b.onclick=e=>{e.stopPropagation();const i=+b.dataset.up;const ids=GL.map(g=>g.id);[ids[i-1],ids[i]]=[ids[i],ids[i-1]];plan.order=ids;savePlan();renderPlanSettings();if(!vPlan.hidden&&!planOut.hidden)renderPlan()})}
-pBank.onchange=()=>{plan.bank=Math.round((parseFloat(pBank.value)||0)*100)/100;plan.bankAt=Date.now();plan.bankInc=payToday()>0;savePlan();pBankNote.textContent=bankNote();renderSafe()};
-pMode.onchange=()=>{plan.payMode=pMode.value;savePlan();if(!vPlan.hidden&&!planOut.hidden)renderPlan()};
+pBankUpd.onclick=()=>openBank();
+pMode.onchange=()=>{plan.payMode=pMode.value;savePlan();renderPlanSettings();renderSafe();if(!vPlan.hidden&&!planOut.hidden)renderPlan()};
 pCush.onchange=()=>{plan.cushion=Math.max(0,Math.round(parseFloat(pCush.value)||0));savePlan();pCush.value=plan.cushion};
 let spId=null;
 function openSp(id){spId=id||null;const x=plan.spend.find(i=>i.id===id);spTitle.textContent=x?'Edit spending':'Add spending';sDelBar.style.display=x?'flex':'none';
@@ -1413,9 +1422,9 @@ function sinceBank(){const at=plan.bankAt||0;const sp=(plan.log||[]).filter(l=>(
 /* running total: what you typed in, plus paydays since, minus bills paid, goal transfers ticked and spending logged */
 function runBal(){const s=sinceBank();return r2(plan.bank+s.inc-s.sp-s.pd-s.gt)}
 function bankNow(){return r2(runBal()+(skipToday()?0:payToday()))}
-function bankNote(){if(!plan.bankAt)return'What\'s in your account today. After that, Stacks keeps it up to date.';const s=sinceBank(),pt=skipToday()?0:payToday(),p=[];
+function bankNote(){if(!plan.bankAt)return'Tap Update and enter what your bank shows. After that, Stacks keeps it up to date.';const s=sinceBank(),pt=skipToday()?0:payToday(),p=[];
   if(s.inc)p.push('+'+money(Math.round(s.inc))+' pay');if(pt)p.push('+'+money(Math.round(pt))+' today\'s pay');if(s.pd)p.push('−'+money(Math.round(s.pd))+' bills paid');if(s.gt)p.push('−'+money(Math.round(s.gt))+' to goals');if(s.sp)p.push('−'+money(Math.round(s.sp))+' spending');
-  return`From ${money(plan.bank)} you typed in ${fmtD(bankDay())}${p.length?' · '+p.join(' · '):''}. Type your real balance any time to reset it.`}
+  return`From ${money(plan.bank)} you entered ${fmtD(bankDay())}${p.length?' · '+p.join(' · '):''}. Bills you paid but didn\'t mark paid aren\'t counted. Tap Update to replace this with what your bank shows.`}
 function periodStart(per){const t=today();if(per==='month')return new Date(t.getFullYear(),t.getMonth(),1);const dow=(t.getDay()+6)%7;return addDays(t,-dow)}
 function spentIn(itemId,per){const st=iso(periodStart(per));return(plan.log||[]).filter(l=>l.item===itemId&&l.date>=st).reduce((a,l)=>a+l.amount,0)}
 /*CUSTOM:start Alex and Ashlee only: "Other" spending comes out of one spending item (default: the fun one) */
@@ -1435,8 +1444,8 @@ function renderSafe(){const C=safeCard;if(!income.length){C.innerHTML='';budSub.
     h+=`<div style="margin-top:8px;font-size:13px"><div style="display:flex;justify-content:space-between"><span>${esc(x.name)}</span><span class="${over?'neg':''}">${money(Math.round(sp))} of ${money(x.amount)} this ${x.per}</span></div><div class="pbar" style="margin:4px 0 0;height:6px"><i style="width:${pct}%;background:${over?'var(--red)':'#1D9E75'}"></i></div></div>`});
   const other=(plan.log||[]).filter(l=>l.item==='other'&&l.date>=iso(periodStart('week'))).reduce((a,l)=>a+l.amount,0);
   if(other>0)h+=`<p class="muted othsp" style="font-size:13px">Other spending this week: ${money(Math.round(other))}</p>`;
-  h+=`<div class="bar"><button class="btn pri" id="logBtn">+ Log spending</button><button class="btn" id="bankBtn">Update bank</button></div>`;
-  h+=`<p style="font-size:12px;margin:8px 0 0" class="muted">${plan.bankAt?'In the bank now (running total): <b>'+money(Math.round(bankNow()))+'</b> · you last typed it in '+agoTxt(plan.bankAt):'<span class="neg">Bank balance not set yet</span>'}</p></div>`;
+  h+=`<div class="bar"><button class="btn pri" id="logBtn">+ Log spending</button><button class="btn" id="bankBtn">Update balance</button></div>`;
+  h+=`<p style="font-size:12px;margin:8px 0 0" class="muted">${plan.bankAt?'Current bank balance: <b>'+m2(bankNow())+'</b> · you last updated it '+agoTxt(plan.bankAt):'<span class="neg">Bank balance not set yet</span>'}</p></div>`;
   C.innerHTML=h;logBtn.onclick=()=>openLog();bankBtn.onclick=openBank}
 function gaugeHTML(R,safe,goalsOn,extra,ch0,days){const total=R.allow+(goalsOn?0:extra);const frac=total>0?Math.max(0,Math.min(1,safe/total)):(safe>0?1:0);
   const N=21,on=safe>0?Math.max(1,Math.round(frac*N)):0;const col=(R.startShort>0||safe<=0)?'var(--red)':frac<.25?'#FFC94A':'var(--lime)';let seg='';
@@ -1537,7 +1546,7 @@ lgSave.onclick=async()=>{const a=parseFloat(lgAmt.value);if(!(a>0)){lgErr.textCo
   savePlan();logBg.classList.remove('on');scanReset();renderSafe();if(!vIns.hidden)renderIns();toast('Logged '+money(Math.round(a*100)/100))};
 lgCancel.onclick=()=>{logBg.classList.remove('on');scanReset()};lgAmt.oninput=()=>lgErr.textContent='';
 function openBank(){bkIn.value=plan.bankAt||plan.bank?bankNow().toFixed(2):'';bankErr.textContent='';const pt=payToday()>0;bkIncRow.style.display=pt?'':'none';bkInc.checked=true;bkNote.textContent=plan.bankAt?'Stacks\' running total is filled in. Change it to what your bank shows.':'';bankBg.classList.add('on')}
-bankSave.onclick=()=>{const v=parseFloat(bkIn.value);if(bkIn.value===''||isNaN(v)){bankErr.textContent='Enter your balance';return}plan.bank=Math.round(v*100)/100;plan.bankAt=Date.now();plan.bankInc=payToday()>0&&bkInc.checked;savePlan();bankBg.classList.remove('on');renderPlanSettings();renderSafe();if(!vPlan.hidden&&!planOut.hidden)renderPlan()};
+bankSave.onclick=()=>{const v=parseFloat(bkIn.value);if(bkIn.value===''||isNaN(v)){bankErr.textContent='Enter your balance';return}plan.bank=Math.round(v*100)/100;plan.bankAt=Date.now();plan.bankInc=payToday()>0&&bkInc.checked;savePlan();bankBg.classList.remove('on');render();renderSafe();toast('Balance updated. Everything\'s recalculated.')};
 bankCancel.onclick=()=>bankBg.classList.remove('on');
 
 function runWhatIf(R){WIin={spend:wiSpend.value,inc:wiInc.value,buy:wiBuy.value,date:wiDate.value};
