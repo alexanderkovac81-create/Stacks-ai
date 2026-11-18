@@ -215,6 +215,11 @@ textarea{width:100%;min-height:90px;font:12px ui-monospace,monospace;padding:10p
 #editBg h3,#payBg h3{padding-right:44px}
 .totop{position:fixed;right:max(23px,calc(50% - 271px));bottom:calc(92px + env(safe-area-inset-bottom));width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--text);opacity:.94;box-shadow:0 4px 14px rgba(0,0,0,.35);z-index:6;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .totop[hidden]{display:none}
+.pbrow{margin-top:8px;font-size:13px}.pbrow .cusl{display:flex;justify-content:space-between;gap:8px}.pbrow .pbar{position:relative;margin:4px 0 0;height:7px}
+.pbrow .pbar em{position:absolute;top:-3px;width:2px;height:13px;background:var(--text);opacity:.55;transform:translateX(-1px)}
+.nowchq{border-color:var(--lime)}.pastp .chq-h{position:relative}
+.pastx{border:1px solid var(--line);background:var(--chip);color:var(--muted);border-radius:999px;min-width:32px;height:32px;padding:0 10px;font:inherit;font-size:16px;cursor:pointer;flex:none;margin-left:8px}
+.pastx.sure{color:var(--red);border-color:var(--red);font-size:13px;font-weight:700}
 /*CUSTOM:start*/.cucard .cusp{margin-top:8px;font-size:13px}.cucard .cusl{display:flex;justify-content:space-between;gap:8px}.cucard .pbar{margin:4px 0 0;height:6px}.cucard .lnkbtn{margin-top:10px}/*CUSTOM:end*/
 .totop svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .sheet{background:var(--card);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px 24px;max-height:92vh;overflow:auto}
@@ -1354,9 +1359,23 @@ function renderPlan(){const O=planOut;
       ${Math.round(c.carry-plan.cushion)>0?`<div class="ln t sur"><span>Surplus</span><span class="lime">${money(Math.round(c.carry-plan.cushion))}</span></div>`:''}</div>`;
     const sm=el.querySelector('.chq-h small');const base=sm.innerHTML;const upd=()=>{const n=keys.filter(k=>plan.ticks&&plan.ticks[k]).length;sm.innerHTML=(keys.length&&n?`<span class="lime">${n} of ${keys.length} ticked</span> · `:'')+base};upd();
     el.querySelectorAll('[data-tk]').forEach(x=>x.onchange=()=>{const k=x.dataset.tk,keep=document.querySelector('.chq.open')?[...chqList.children].indexOf(el):-1;if(tickSet(k,x.checked,TI[k])){savePlan();renderPlan();reopenChq(keep);renderSafe();renderPlanSettings()}else{x.checked=!!(plan.ticks&&plan.ticks[k]);upd()}});
-    if(!shown&&!L.children.length)el.classList.add('open');
+    if(!shown&&(!L.children.length))el.classList.add('open');
     {const pb=el.querySelector('[data-payamt]');if(pb)pb.onclick=e=>{e.stopPropagation();const [i,k]=pb.dataset.payamt.split('|');openPayAmt(i,k,false)}}
     el.querySelector('.chq-h').onclick=()=>el.classList.toggle('open');L.appendChild(el)});shown+=n;chqMore.style.display=shown>=all.length?'none':''};
+  {const P=curPeriod();if(P&&(!all.length||all[0].date>P.start)){const el=document.createElement('div');el.className='chq open nowchq';const cd=iso(P.start),keys=[],TK=plan.ticks||{},TI={};
+    const end=P.next?addDays(P.next,-1):addDays(t0,6),amt=P.who.reduce((a,x)=>a+payAmt(x,P.start),0);
+    const due=bills.filter(b=>b.due&&b.due>=cd&&parse(b.due)<=end).sort((a,b)=>a.due<b.due?-1:1);
+    const rows=due.map(b=>{const k=cd+'|b|'+b.name+'|'+b.due;keys.push(k);TI[k]={t:'b',bid:b.id,name:b.name};const late=parse(b.due)<t0;
+      return`<label class="ckl"><input type="checkbox" data-tk="${esc(k)}"><span class="ckn">${esc(b.name)} <span class="acct">${esc(acctName(acctOf(b)))}</span><small>${late?'<span class="neg">was due '+fmtD(parse(b.due))+'</span>':'due '+fmtD(parse(b.due))}</small></span><span>${b.variable?'~':''}${money(b.amount)}</span></label>`}).join('');
+    const done=Object.keys(TK).filter(k=>k.startsWith(cd+'|')&&TK[k]&&typeof TK[k]==='object'&&(TK[k].t==='b'||TK[k].t==='g')).map(k=>{keys.push(k);const v=TK[k];
+      return`<label class="ckl"><input type="checkbox" data-tk="${esc(k)}" checked><span class="ckn">${v.t==='b'?esc(v.name)+'<small>paid '+fmtD(new Date(v.at))+'</small>':'Toward '+esc(v.name)+'<small>moved '+fmtD(new Date(v.at))+'</small>'}</span><span>${m2(v.a)}</span></label>`}).join('');
+    const sp=periodSpendRows(P.start,end),spent=sp.reduce((a,r)=>a+r.sp,0),left=P.next?Math.max(0,spendPerDay()*Math.max(0,Math.round((P.next-t0)/864e5))):0;
+    el.innerHTML=`<div class="chq-h"><span class="ic">$</span><div class="nm"><b>${fmtD(P.start)} · ${esc(P.who.map(x=>x.name).join(' + '))}</b><small><span class="lime">This pay</span>${P.next?' · until '+fmtD(P.next):''}</small></div><div class="amt pos">${money(amt)}</div></div>
+      <div class="chq-b"><div class="ln"><span>Already in your bank balance</span><span></span></div>${rows||done?'<div class="ln t"><span>Bills this pay</span><span></span></div>'+rows+done:'<div class="ln"><span>No bills left this pay</span><span></span></div>'}
+      <div class="ln t"><span>Spent so far this pay</span><span>${money(Math.round(spent))}</span></div>${spendBars(sp)}
+      ${P.next?`<div class="ln"><span>Everyday spending until ${fmtD(P.next)}</span><span>${money(Math.round(left))}</span></div>`:''}</div>`;
+    el.querySelectorAll('[data-tk]').forEach(x=>x.onchange=()=>{const k=x.dataset.tk;if(tickSet(k,x.checked,TI[k])){savePlan();renderPlan();renderSafe();renderPlanSettings()}else x.checked=!!(plan.ticks&&plan.ticks[k])});
+    el.querySelector('.chq-h').onclick=()=>el.classList.toggle('open');chqList.appendChild(el)}}
   add(8);chqMore.onclick=()=>add(8)}
 
 /* ticking in the payday checklist: a bill's last part = paid; a goal = money moved */
@@ -1369,6 +1388,16 @@ function tickSet(k,on,info){plan.ticks=plan.ticks||{};const cur=plan.ticks[k];
   if(cur&&cur.t==='b'){if(hist.some(h=>h.id===cur.hid)){undoHist(cur.hid);if(hist.some(h=>h.id===cur.hid))return false}delete plan.ticks[k];return true}
   if(cur&&cur.t==='g'){goalApply(cur.gid,-cur.a);delete plan.ticks[k];return true}
   delete plan.ticks[k];return true}
+/* pay periods: from one payday (any income) up to the day before the next */
+function payDays(a,b){const m=new Map();income.forEach(x=>incOccCal(x,a,b).forEach(d=>{if(d>=a&&d<=b){const k=iso(d);if(!m.has(k))m.set(k,[]);m.get(k).push(x)}}));return[...m.keys()].sort().map(k=>({d:parse(k),who:m.get(k)}))}
+function curPeriod(){const t=today(),back=payDays(addDays(t,-70),t);if(!back.length)return null;const fwd=payDays(addDays(t,1),addDays(t,70)),p=back[back.length-1];
+  return{start:p.d,who:p.who,next:fwd.length?fwd[0].d:null}}
+function spendIn(a,b){const A=iso(a),B=iso(b),by={};(plan.log||[]).forEach(l=>{if(l.date>=A&&l.date<=B)by[l.item]=(by[l.item]||0)+l.amount});return by}
+function periodSpendRows(a,b){const by=spendIn(a,b),days=Math.max(1,Math.round((b-a)/864e5)+1),rows=[];
+  plan.spend.forEach(x=>{const allow=x.per==='week'?x.amount/7*days:x.amount*12/365*days;let sp=by[x.id]||0;delete by[x.id];rows.push({name:x.name,sp,allow})});
+  const other=Object.values(by).reduce((a,v)=>a+v,0);if(other>0.005)rows.push({name:'Other',sp:other,allow:0});return rows}
+function spendBars(rows){const mx=Math.max(1,...rows.map(r=>Math.max(r.sp,r.allow)));return rows.map(r=>{const over=r.allow>0&&r.sp>r.allow+0.005;
+  return`<div class="pbrow"><div class="cusl"><span>${esc(r.name)}</span><span class="${over?'neg':''}">${money(Math.round(r.sp))}${r.allow>0?' of '+money(Math.round(r.allow)):''}</span></div><div class="pbar"><i style="width:${Math.min(100,r.sp/mx*100)}%;background:${over?'var(--red)':'#1D9E75'}"></i>${r.allow>0?`<em style="left:${Math.min(100,r.allow/mx*100)}%"></em>`:''}</div></div>`}).join('')}
 function reopenChq(i){if(i>=0&&chqList.children[i])chqList.children[i].classList.add('open')}
 function goalCard(g,R,sub,foot){const s=R.st[g.id],t0=R.t0,save=g.type==='save';
   let ik=save?(guessIcon(g.name)||'savings'):(g.fromBill&&(bills.find(b=>b.id===g.fromBill)||{}).icon)||guessIcon(g.name)||'ccard';if(!BI[ik])ik=save?'savings':'ccard';
@@ -1762,7 +1791,23 @@ function renderIns(){if(vIns.hidden)return;const t0=today();if(!insD)insD=new Da
   if(O.tot>0){const r=50,C=2*Math.PI*r;let st=0,circ='';O.cats.forEach(c=>{const L=c.amt/O.tot*C;circ+=`<circle cx="70" cy="70" r="${r}" fill="none" stroke="${c.col}" stroke-width="18" stroke-dasharray="${Math.max(L-(O.cats.length>1?2.5:0),.5).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-st).toFixed(2)}" transform="rotate(-90 70 70)"/>`;st+=L});
     h+=`<div class="pcard"><h4>Where it went</h4><div class="ring"><div class="rsvg"><svg viewBox="0 0 140 140" role="img" aria-label="Spending by category">${circ}</svg><div class="rmid"><b>${cm(O.tot)}</b><small>spent</small></div></div><div class="rleg">`+
       O.cats.slice(0,8).map(c=>`<div><i style="background:${c.col}"></i><span>${esc(c.lab)}</span><b>${money(Math.round(c.amt))}</b><small>${Math.round(c.amt/O.tot*100)}%</small></div>`).join('')+`</div></div></div>`}
-  insBody.innerHTML=h;window.__insRows=[...I.rows,...O.rows].sort((a,b)=>a[0]<b[0]?-1:1);window.__insLab=lab}
+  insBody.innerHTML=h+pastHTML();pastWire();window.__insRows=[...I.rows,...O.rows].sort((a,b)=>a[0]<b[0]?-1:1);window.__insLab=lab}
+/* previous pay periods: one tab each, with bills that may not have been paid and a spending graph */
+function pastPeriods(){const t=today();if(!plan.pastFrom){const P=curPeriod();plan.pastFrom=iso(P?P.start:t);savePlan()}
+  const ps=payDays(parse(plan.pastFrom),t),out=[],del=new Set(plan.pastDel||[]);
+  for(let i=0;i<ps.length-1;i++){const a=ps[i].d,nx=ps[i+1].d;if(nx>t)break;if(!del.has(iso(a)))out.push({start:a,end:addDays(nx,-1),next:nx,who:ps[i].who})}return out.reverse()}
+function pastHTML(){const L=pastPeriods(),t=today();let h='<div class="sec noprint" style="margin-top:22px">Previous pay periods</div>';
+  if(!L.length)return h+'<div class="pcard noprint"><p class="muted" style="margin:0">Previous pay periods will appear here. Each one shows bills that might not have been paid and a graph of what you spent.</p></div>';
+  return h+L.map(p=>{const A=iso(p.start),B=iso(p.end),open=bills.filter(b=>b.due&&b.due>=A&&b.due<=B&&parse(b.due)<t),paid=hist.filter(x=>x.type==='paid'&&x.due>=A&&x.due<=B),rows=periodSpendRows(p.start,p.end),spent=rows.reduce((a,r)=>a+r.sp,0);
+    return`<div class="chq pastp noprint" data-past="${A}"><div class="chq-h"><span class="ic">$</span><div class="nm"><b>${fmtD(p.start)} – ${fmtD(p.end)} · ${esc(p.who.map(x=>x.name).join(' + '))}</b><small>${open.length?`<span class="neg">${open.length} bill${open.length>1?'s':''} may not be paid</span> · `:''}spent ${money(Math.round(spent))}</small></div><button type="button" class="pastx" data-pdel="${A}" aria-label="Delete this pay period">×</button></div>
+      <div class="chq-b"><div class="ln t"><span>Bills due this pay</span><span></span></div>${open.map(b=>`<label class="ckl"><input type="checkbox" data-ppay="${b.id}"><span class="ckn">${esc(b.name)}<small class="neg">was due ${fmtD(parse(b.due))}, not marked paid</small></span><span>${b.variable?'~':''}${money(b.amount)}</span></label>`).join('')}
+      ${paid.map(x=>`<label class="ckl"><input type="checkbox" checked data-pundo="${x.id}"><span class="ckn">${esc(x.name)}<small>paid ${fmtD(parse(x.on))}</small></span><span>${money(x.amount)}</span></label>`).join('')}${!open.length&&!paid.length?'<div class="ln"><span>No bills were due</span><span></span></div>':''}
+      <div class="ln t"><span>Spending</span><span>${money(Math.round(spent))}</span></div>${rows.length?spendBars(rows):'<div class="ln"><span>Nothing logged</span><span></span></div>'}</div></div>`}).join('')}
+function pastWire(){insBody.querySelectorAll('.pastp .chq-h').forEach(h=>h.onclick=e=>{if(e.target.closest('.pastx'))return;h.parentElement.classList.toggle('open')});
+  insBody.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=e=>{e.stopPropagation();if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Delete?';b.classList.add('sure');setTimeout(()=>{if(b.isConnected){b.dataset.sure='';b.textContent='×';b.classList.remove('sure')}},3500);return}
+    plan.pastDel=[...new Set([...(plan.pastDel||[]),b.dataset.pdel])];savePlan();renderIns();toast('Pay period removed from Insights')});
+  insBody.querySelectorAll('[data-ppay]').forEach(x=>x.onchange=()=>{const b=bills.find(z=>z.id===x.dataset.ppay);if(b&&x.checked){settle(b,'paid',b.amount);renderIns()}});
+  insBody.querySelectorAll('[data-pundo]').forEach(x=>x.onchange=()=>{if(!x.checked){undoHist(x.dataset.pundo);renderIns()}})}
 document.querySelectorAll('[data-ip]').forEach(b=>b.onclick=()=>{insP=b.dataset.ip;renderIns()});
 insPrev.onclick=()=>{insD=insP==='year'?new Date(insD.getFullYear()-1,insD.getMonth(),1):new Date(insD.getFullYear(),insD.getMonth()-1,1);renderIns()};
 insNext.onclick=()=>{const t0=today(),n=insP==='year'?new Date(insD.getFullYear()+1,insD.getMonth(),1):new Date(insD.getFullYear(),insD.getMonth()+1,1);if(n>t0)return;insD=n;renderIns()};
