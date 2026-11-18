@@ -1243,20 +1243,33 @@ function buildOccs(t0,H,cut){const occs=[];const gb=new Set(AG.filter(g=>g.fromB
   if(WI&&WI.buy>0&&WI.date)occs.push({name:'What-if purchase',amount:WI.buy,date:parse(WI.date),prev:addDays(t0,-1),pri:'must'});
   return occs}
 function lastIdx(ch,d){let lo=0,hi=ch.length-1,r=-1;while(lo<=hi){const m=(lo+hi)>>1;if(ch[m].date<=d){r=m;lo=m+1}else hi=m-1}return r}
-function fund(ch,occs,t0,mode){let bank=0;
+function fund(ch,occs,t0,mode){let bank=0;ch.grps=[];
   occs.forEach(o=>{if(o.date<t0){bank+=o.amount;return}let idx=[],amt=o.amount;const sp=mode==='spread'||o.split==='all'?Infinity:(+o.split||0);
     if(sp>1){const j=lastIdx(ch,o.date);for(let i=j;i>=0&&ch[i].date>o.prev&&idx.length<sp;i--)idx.push(i);
-      if(mode==='spread'&&o.first&&idx.length&&fq(o.freq).d<=31){const p0=addDays(o.date,-Math.round(fq(o.freq).d));const f=Math.min(1,Math.max(0,(t0-p0)/(o.date-p0)));const saved=o.amount*f;bank+=saved;amt-=saved}}
+      var saved=0;if(mode==='spread'&&o.first&&idx.length&&fq(o.freq).d<=31){const p0=addDays(o.date,-Math.round(fq(o.freq).d));const f=Math.min(1,Math.max(0,(t0-p0)/(o.date-p0)));saved=o.amount*f;bank+=saved;amt-=saved}}
     if(!idx.length){const j=lastIdx(ch,o.date);if(j<0){bank+=amt;return}idx=[j]}
-    const part=amt/idx.length;idx.forEach(i=>ch[i].bills.push({acct:o.acct,name:o.name,part,due:o.date,full:o.amount,pri:o.pri,n:idx.length,bid:o.bid||null,last:i===idx[0]}))});
+    const part=amt/idx.length,grp={due:o.date,bank:typeof saved==='number'?saved:0,items:[]};
+    idx.slice().reverse().forEach(i=>{const e={acct:o.acct,name:o.name,part,due:o.date,full:o.amount,pri:o.pri,n:idx.length,bid:o.bid||null,last:i===idx[0],grp,ci:i};ch[i].bills.push(e);grp.items.push(e)});ch.grps.push(grp)});
   return bank}
+/* keep every cheque from going short while still paying each bill by its due date:
+   1) if the bank can't hold the part of a bill that's assumed already set aside, move it into that bill's remaining cheques
+   2) if a cheque can't cover its set-asides, push parts to a later cheque that's still before the due date */
+function level(ch,start,floor){const G=ch.grps||[];let s=start;
+  if(s<floor)for(const g of G.filter(g=>g.bank>0.005).sort((a,b)=>b.due-a.due)){if(s>=floor-0.005)break;const mv=Math.min(g.bank,floor-s);g.bank-=mv;s+=mv;g.items.forEach(e=>e.part+=mv/g.items.length)}
+  let run=s;ch.forEach(c=>{let left=leftOf(c);if(run+left<floor-0.005){let need=floor-(run+left);
+      for(const e of c.bills.filter(e=>e.grp&&e.grp.items.indexOf(e)<e.grp.items.length-1&&e.part>0.005).sort((a,b)=>b.due-a.due)){if(need<=0.005)break;
+        const nx=e.grp.items[e.grp.items.indexOf(e)+1],mv=Math.min(e.part,need);e.part-=mv;nx.part+=mv;need-=mv}
+      left=leftOf(c)}run+=left});
+  G.forEach(g=>{const its=g.items.filter(e=>e.part>0.005);its.forEach((e,k)=>{e.n=its.length;e.k=k+1;e.last=k===its.length-1})});
+  ch.forEach(c=>{c.bills=c.bills.filter(e=>e.part>0.005)});return s}
 function leftOf(c){return c.amount-c.bills.reduce((a,b)=>a+b.part,0)-c.spend}
 
 function simulate(t0,H,cut){
-  const ch=buildCheques(t0,H);const occs=buildOccs(t0,H,cut);const bankNeed=fund(ch,occs,t0,plan.payMode==='full'?'due':'spread');ch.forEach(c=>c.left=leftOf(c));
+  const ch=buildCheques(t0,H);const occs=buildOccs(t0,H,cut);let bankNeed=fund(ch,occs,t0,plan.payMode==='full'?'due':'spread');
   const sb=sinceBank();const allow=ch.length?spendPerDay()*Math.max(0,Math.round((ch[0].date-(sb.day<t0?sb.day:t0))/864e5)):0;
   const pre=Math.max(0,allow-sb.sp);
-  let carry=plan.bank+sb.inc-sb.sp-sb.pd-sb.gt-bankNeed-pre;const startShort=carry<0?-carry:0;const carry0=carry;
+  let carry=plan.bank+sb.inc-sb.sp-sb.pd-sb.gt-bankNeed-pre;{const c2=level(ch,carry,Math.max(0,plan.cushion||0));bankNeed-=c2-carry;carry=c2}ch.forEach(c=>c.left=leftOf(c));
+  const startShort=carry<0?-carry:0;const carry0=carry;
   let rp=0,rm=0;ch.slice(0,8).forEach(c=>{rp+=c.left;if(rp<rm)rm=rp});
   const st={};AG.forEach(g=>st[g.id]={saved:g.type==='save'?(g.saved||0):0,bal:g.type==='debt'?g.balance:0,done:null,interest:0,track:[[t0,prog(g,g.type==='save'?(g.saved||0):g.balance)]]});
   if(AG.length)AG.forEach(g=>{if(g.type==='save'&&st[g.id].saved>=g.target)st[g.id].done=t0;if(g.type==='debt'&&g.balance<=0)st[g.id].done=t0});
@@ -1325,7 +1338,7 @@ function renderPlan(){const O=planOut;
     const cd=iso(c.date),keys=[],TI={},TK=plan.ticks||{};const rec=k=>TK[k]&&typeof TK[k]==='object'&&(TK[k].t==='b'||TK[k].t==='g');
     const ck=(k,label,amt,cls,info)=>{if(rec(k))k+='+';keys.push(k);if(info)TI[k]=info;return`<label class="ckl"><input type="checkbox" data-tk="${esc(k)}"${TK[k]?' checked':''}><span class="ckn">${label}</span><span class="${cls||''}">${amt}</span></label>`};
     const done=Object.keys(TK).filter(k=>k.startsWith(cd+'|')&&rec(k)).map(k=>{keys.push(k);const v=TK[k];return`<label class="ckl"><input type="checkbox" data-tk="${esc(k)}" checked><span class="ckn">${v.t==='b'?esc(v.name)+'<small>paid '+fmtD(new Date(v.at))+'</small>':'Toward '+esc(v.name)+'<small>moved '+fmtD(new Date(v.at))+'</small>'}</span><span class="${v.t==='g'?'pos':''}">${m2(v.a)}</span></label>`}).join('');
-    const bl=into+c.bills.map(b=>ck(cd+'|b|'+b.name+'|'+iso(b.due),`${esc(b.name)} <span class="acct">${esc(acctName(b.acct))}</span><small>due ${fmtD(b.due)}${b.n>1?' · '+(b.last?'last of ':'1 of ')+b.n+' parts':''}</small>`,money(r2(b.part)),'',b.bid&&b.last?{t:'b',bid:b.bid,name:b.name}:null)).join('')+done;
+    const bl=into+c.bills.map(b=>ck(cd+'|b|'+b.name+'|'+iso(b.due),`${esc(b.name)} <span class="acct">${esc(acctName(b.acct))}</span><small>due ${fmtD(b.due)}${b.n>1?' · '+(b.last?'last of '+b.n+' parts':'part '+(b.k||1)+' of '+b.n):''}</small>`,money(r2(b.part)),'',b.bid&&b.last?{t:'b',bid:b.bid,name:b.name}:null)).join('')+done;
     el.innerHTML=`<div class="chq-h"><span class="ic">$</span><div class="nm"><b>${fmtD(c.date)}${c.date.getFullYear()!==t0.getFullYear()?' '+c.date.getFullYear():''} · ${esc(c.who)}</b><small>${c.short?'<span class="neg">short '+money(Math.round(c.short))+'</span>':tg?'to goals '+money(Math.round(tg)):'extra '+money(Math.round(Math.max(0,c.extra)))}</small></div><div class="amt pos">${c.est?'~':''}${money(c.amount)}</div></div>
       <div class="chq-b"><button class="lnkbtn" data-payamt="${c.iid}|${iso(c.date)}">${c.est?(c.shi?'Estimated from '+shiftTxt(c.shi)+' · set the real amount':'Estimated from your last cheques · set the real amount'):'Change this cheque\'s amount'}</button>${bl||'<div class="ln"><span>No bills set aside from this cheque</span><span></span></div>'}<div class="ln"><span>Everyday spending · ${c.days} days</span><span>${money(Math.round(c.spend))}</span></div>
       ${c.goals.map(x=>x.type==='save'?ck(cd+'|g|'+x.name,`Toward ${esc(x.name)}<small>Goal: ${m2(x.target)}</small>`,`${m2(x.give)} / ${m2(x.after)}`,'pos',{t:'g',gid:x.gid,name:x.name,a:r2(x.give)})
