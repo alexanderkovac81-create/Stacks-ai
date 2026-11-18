@@ -2131,7 +2131,7 @@ cuOth.onchange=()=>{plan.otherInto=cuOth.value;savePlan();renderSafe()};
   and each phone keeps a read-only copy of the other phone's notes. */
 const HAB_KEY='stacks.habits1',HAB_OTHERS='stacks.habitsOthers',HAB_MAX=400,HAB_GAP=30*60*1000,HAB_MOVE=15*60*1000;
 let hab=(()=>{try{const s=JSON.parse(localStorage.getItem(HAB_KEY)||'null');if(s&&s.dev)return s}catch(e){}
-  return{v:1,dev:Math.random().toString(36).slice(2,10),who:'',on:true,since:Date.now(),notes:[],views:{},cats:{}}})();
+  return{v:1,dev:Math.random().toString(36).slice(2,10),who:'',on:false,since:Date.now(),notes:[],views:{},cats:{}}/* v28: off by default on new phones; turn on in Settings */})();
 let habSess=null,habPend=[],habHidden=0;
 function habSave(){try{localStorage.setItem(HAB_KEY,JSON.stringify(hab))}catch(e){}}
 function habOthers(){try{return JSON.parse(localStorage.getItem(HAB_OTHERS)||'{}')}catch(e){return{}}}
@@ -2196,7 +2196,7 @@ function habPaydays(){return new Set(habAllNotes().filter(n=>n.t==='payday').map
 function habFill(){habOn.checked=!!hab.on;habWho.innerHTML='<option value="">Not set</option>'+habNames().map(n=>`<option>${esc(n)}</option>`).join('');habWho.value=hab.who||'';
   const n=habAllNotes().length,p=habPaydays();habSum.textContent=hab.on?`Recording since ${fmtD(new Date(hab.since))}. ${n} note${n===1?'':'s'}, ${p} payday${p===1?'':'s'} so far. Suggestions start after about 3 paydays, and nothing changes without your OK.`:'Off on this phone. Nothing is being noted.'}
 gearBtn.addEventListener('click',habFill);
-habOn.onchange=()=>{hab.on=habOn.checked;habSave();habFill()};
+habOn.onchange=()=>{hab.on=habOn.checked;if(hab.on&&!hab.notes.length)hab.since=Date.now();habSave();habFill();if(hab.on)setTimeout(habAskWho,600)};
 habWho.onchange=()=>{habSetWho(habWho.value);habFill()};
 habClr.onclick=()=>{if(habClr.dataset.sure!=='1'){habClr.dataset.sure='1';habClr.textContent='Tap again to clear';setTimeout(()=>{habClr.dataset.sure='';habClr.textContent='Clear this phone\'s notes'},4000);return}
   hab.notes=[];hab.views={};hab.cats={};hab.since=Date.now();habSave();habClr.dataset.sure='';habClr.textContent='Clear this phone\'s notes';habFill();toast('This phone\'s notes are cleared')};
